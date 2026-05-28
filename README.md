@@ -55,7 +55,7 @@
 ---
 
 # 🏗️ Architecture
-'''
+
 User (Frontend)
 ↓
 Upload Image
@@ -75,3 +75,42 @@ Frontend แสดงผล
 ---
 
 # 📁 Project Structure
+
+nutriscan-ai/
+│
+├── frontend/
+│ ├── components/
+│ ├── pages/
+│ ├── services/
+│ ├── styles/
+│ └── package.json
+│
+├── backend/
+│ ├── app/
+│ │ ├── main.py
+│ │ ├── routes/
+│ │ │ └── scan.py
+│ │ ├── services/
+│ │ │ ├── ocr.py
+│ │ │ ├── ai.py
+│ │ │ └── parser.py
+│ │ └── models/
+│ │
+│ ├── requirements.txt
+│ └── .env
+│
+├── docs/
+│ ├── integration-map.md
+│ ├── api-spec.md
+│
+└── README.md
+
+
+---
+
+# 🚀 Quick Start (Local Development)
+
+## 1. Clone project
+```bash
+git clone https://github.com/your-username/nutriscan-ai.git
+cd nutriscan-ai
