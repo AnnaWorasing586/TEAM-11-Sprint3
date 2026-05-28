@@ -55,7 +55,7 @@
 ---
 
 # 🏗️ Architecture
-
+'''
 User (Frontend)
 ↓
 Upload Image
