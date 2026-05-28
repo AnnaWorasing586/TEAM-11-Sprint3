@@ -1,19 +1,19 @@
 # 🥗 NutriScan AI
 
-ระบบ AI สำหรับสแกนฉลากโภชนาการอาหารจากภาพ เพื่อแปลงข้อมูลให้เข้าใจง่ายและวิเคราะห์สุขภาพอาหารแบบอัตโนมัติ
+NutriScan AI คือระบบ AI สำหรับสแกนฉลากโภชนาการอาหารจากภาพ เพื่อช่วยให้ผู้ใช้เข้าใจข้อมูลโภชนาการได้ง่ายและรวดเร็วมากขึ้น โดยระบบจะใช้ OCR และ AI ในการอ่าน วิเคราะห์ และสรุปข้อมูลสุขภาพอาหารอัตโนมัติ
 
 ---
 
 # 📌 Overview
 
-**NutriScan AI** คือเว็บแอปที่ช่วยให้ผู้ใช้สามารถอัปโหลดหรือถ่ายรูปฉลากโภชนาการอาหาร แล้วระบบจะใช้ AI ในการ:
+ผู้ใช้สามารถอัปโหลดหรือถ่ายรูปฉลากโภชนาการอาหาร จากนั้นระบบจะทำการ:
 
-- อ่านข้อมูลจากภาพ (OCR)
-- แปลงข้อมูลโภชนาการให้อยู่ในรูปแบบโครงสร้าง
-- วิเคราะห์ความเหมาะสมต่อสุขภาพ
-- สรุปผลให้อ่านง่ายในภาษาคนทั่วไป
+- อ่านข้อความจากภาพด้วย OCR
+- แปลงข้อมูลให้อยู่ในรูปแบบโภชนาการ
+- วิเคราะห์คุณค่าทางอาหาร
+- สรุปผลให้อ่านง่าย เช่น น้ำตาลสูง ไขมันสูง หรือเหมาะกับสุขภาพหรือไม่
 
-🎯 เป้าหมาย: ทำให้ข้อมูลโภชนาการที่ซับซ้อน กลายเป็นข้อมูลที่เข้าใจได้ในไม่กี่วินาที
+เป้าหมายของโปรเจคคือช่วยให้การอ่านฉลากโภชนาการเป็นเรื่องง่าย เข้าถึงได้ และใช้เวลาเพียงไม่กี่วินาที
 
 ---
 
@@ -21,11 +21,11 @@
 
 - 📷 อัปโหลดหรือถ่ายภาพฉลากโภชนาการ
 - 🔍 OCR อ่านข้อความจากภาพ
-- 🤖 AI แปลงข้อมูลให้อยู่ในรูปแบบโภชนาการ
-- 🧠 วิเคราะห์สุขภาพอาหาร (น้ำตาลสูง / ไขมันสูง / โปรตีนต่ำ ฯลฯ)
-- 📊 แสดงผลโภชนาการแบบแยกหมวด
+- 🤖 AI วิเคราะห์ข้อมูลโภชนาการ
+- 🧠 สรุปผลสุขภาพอาหารอัตโนมัติ
+- 📊 แสดงข้อมูล Calories, Sugar, Fat, Protein
 - ⚡ ประมวลผลแบบเรียลไทม์
-- 📱 รองรับมือถือและเดสก์ท็อป
+- 📱 รองรับทั้งมือถือและเดสก์ท็อป
 
 ---
 
@@ -43,9 +43,9 @@
 
 ## AI / OCR
 - Tesseract OCR / EasyOCR
-- GPT-based LLM สำหรับวิเคราะห์ข้อมูล
+- GPT-based AI Model
 
-## Database (optional)
+## Database (Optional)
 - MongoDB / PostgreSQL
 
 ## Deployment
@@ -56,61 +56,214 @@
 
 # 🏗️ Architecture
 
-User (Frontend)
-↓
-Upload Image
-↓
-Backend (FastAPI)
-↓
-OCR Engine → ดึงข้อความจากภาพ
-↓
-AI Parser → แปลงข้อมูลโภชนาการ
-↓
-Nutrition Analyzer → วิเคราะห์สุขภาพ
-↓
+```text
+User
+  ↓
+Frontend (React / Next.js)
+  ↓
+Upload Nutrition Label Image
+  ↓
+Backend API (FastAPI)
+  ↓
+OCR Engine
+  ↓
+AI Nutrition Parser
+  ↓
+Nutrition Analysis
+  ↓
 JSON Response
-↓
-Frontend แสดงผล
+  ↓
+Frontend Dashboard
+```
 
 ---
 
 # 📁 Project Structure
 
+```text
 nutriscan-ai/
 │
 ├── frontend/
-│ ├── components/
-│ ├── pages/
-│ ├── services/
-│ ├── styles/
-│ └── package.json
+│   ├── components/
+│   ├── pages/
+│   ├── services/
+│   ├── styles/
+│   └── package.json
 │
 ├── backend/
-│ ├── app/
-│ │ ├── main.py
-│ │ ├── routes/
-│ │ │ └── scan.py
-│ │ ├── services/
-│ │ │ ├── ocr.py
-│ │ │ ├── ai.py
-│ │ │ └── parser.py
-│ │ └── models/
-│ │
-│ ├── requirements.txt
-│ └── .env
+│   ├── app/
+│   │   ├── main.py
+│   │   ├── routes/
+│   │   ├── services/
+│   │   └── models/
+│   │
+│   ├── requirements.txt
+│   └── .env
 │
 ├── docs/
-│ ├── integration-map.md
-│ ├── api-spec.md
+│   ├── integration-map.md
+│   └── api-spec.md
 │
 └── README.md
-
+```
 
 ---
 
 # 🚀 Quick Start (Local Development)
 
-## 1. Clone project
+## 1. Clone Repository
+
 ```bash
 git clone https://github.com/your-username/nutriscan-ai.git
 cd nutriscan-ai
+```
+
+---
+
+## 2. Backend Setup
+
+```bash
+cd backend
+
+python -m venv venv
+
+# Activate virtual environment
+
+pip install -r requirements.txt
+
+uvicorn app.main:app --reload
+```
+
+Backend running at:
+
+```text
+http://localhost:8000
+```
+
+---
+
+## 3. Frontend Setup
+
+```bash
+cd frontend
+
+npm install
+
+npm run dev
+```
+
+Frontend running at:
+
+```text
+http://localhost:3000
+```
+
+---
+
+# 🌐 Deployment (Render)
+
+## Backend Deployment
+
+### Build Command
+
+```bash
+pip install -r requirements.txt
+```
+
+### Start Command
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 10000
+```
+
+### Environment Variables
+
+```env
+OPENAI_API_KEY=your_api_key
+```
+
+---
+
+# 🔌 API Endpoints
+
+## Health Check
+
+```http
+GET /health
+```
+
+Response:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+---
+
+## Scan Nutrition Label
+
+```http
+POST /api/scan
+```
+
+Request:
+
+```json
+{
+  "image": "file"
+}
+```
+
+Response:
+
+```json
+{
+  "product_name": "Chocolate Milk",
+  "calories": 250,
+  "sugar": "30g",
+  "fat": "12g",
+  "protein": "5g",
+  "analysis": "High sugar content. Consume moderately."
+}
+```
+
+---
+
+# 🎨 Design Highlights
+
+- UI ใช้งานง่าย เน้นการสแกนและดูผลลัพธ์ทันที
+- รองรับ Drag & Drop Upload
+- แสดงผลข้อมูลแบบ Card Layout
+- ใช้สีช่วยแสดงระดับความเสี่ยงด้านสุขภาพ
+- Responsive Design รองรับมือถือ
+- ใช้เวลาแสดงผลรวดเร็ว
+
+---
+
+# 📊 Integration Flow
+
+```text
+Frontend
+   ↓
+Upload Image
+   ↓
+Backend API
+   ↓
+OCR Processing
+   ↓
+AI Analysis
+   ↓
+Nutrition Result
+   ↓
+Frontend Display
+```
+
+---
+
+# 📄 License
+
+MIT License
+
+สามารถใช้งาน แก้ไข และพัฒนาต่อยอดได้อย่างอิสระ
