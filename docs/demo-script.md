@@ -1,4 +1,4 @@
-# NutriScan AI Demo Script
+# 🥗 NutriScan AI Demo Script 🥩
 
 ## Introduction
 
