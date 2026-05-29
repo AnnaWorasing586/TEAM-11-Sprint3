@@ -81,10 +81,13 @@
 
 # 🔗 Evidence Links
 
-- GitHub Repository: https://github.com/your-team/nutriscan-ai
-- Figma Design: https://figma.com/
-- Postman Collection: https://postman.com/
-- Demo Video: https://drive.google.com/
+- GitHub Repository: https://github.com/AnnaWorasing586/TEAM-11-Sprint3
+- Demo Video: [ใส่ลิงก์]
+- Core Flow Documentation: docs/core-flow.md
+- Demo Script: docs/demo-script.md
+- Build Log: docs/build-log.md
+- Known Issues: docs/known-issues.md
+- Sprint 4 Test Plan: docs/test-plan-sprint4.md
 
 ---
 
