@@ -56,6 +56,29 @@
 
 ---
 
+# 🗓️ Day 4 — Demo Evidence & CP5 Submission (30 May 2026)
+
+| ผู้รับผิดชอบ       | สิ่งที่ทำ                                                             | หลักฐาน                             |
+| ------------------ | --------------------------------------------------------------------- | ----------------------------------- |
+| PM Team            | สรุป Sprint Review, Retrospective และจัดเตรียม CP5 Submission Package | Sprint Review Document              |
+| UX/Product Team    | ตรวจสอบ User Flow และเตรียม Demo Script                               | demo-script.md                      |
+| Frontend Team      | ตรวจสอบ Upload Flow และ Result Dashboard สำหรับการ Demo               | UI Screenshot / Demo Video          |
+| Backend Team       | ทดสอบ API และการเชื่อมต่อระบบ OCR กับ Firebase                        | API Test Result                     |
+| Full Team          | ทดสอบ Core Flow แบบ End-to-End และบันทึก Demo Evidence                | Demo Video / Integration Screenshot |
+| Documentation Team | อัปเดต README, Build Log, Known Issues และ Sprint 4 Test Plan         | GitHub Documentation                |
+
+### Day 4 Output
+
+* Prototype v1 สามารถสาธิต Core Flow ได้
+* Upload Image → OCR → Nutrition Result ทำงานได้
+* จัดเตรียม Demo Evidence สำหรับการตรวจสอบ
+* สรุป Known Issues และ Limitations ของระบบ
+* จัดทำ Sprint Review และ Retrospective
+* จัดทำ Sprint 4 Test Plan สำหรับ User Testing
+* เตรียม CP5 Submission Package ครบถ้วน
+
+---
+
 # 🔗 Evidence Links
 
 - GitHub Repository: https://github.com/your-team/nutriscan-ai
