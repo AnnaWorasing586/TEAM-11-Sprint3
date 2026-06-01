@@ -17,7 +17,7 @@ class NutriScanApp extends StatelessWidget {
         primarySwatch: Colors.green,
         useMaterial3: true,
       ),
-      home: const ScanPage(),
+      home: const HomePage(),
     );
   }
 }
