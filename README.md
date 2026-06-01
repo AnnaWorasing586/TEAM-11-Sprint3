@@ -1,26 +1,38 @@
-# TEAM-11-Sprint3
-# Role:
-#### Kittiyanee Chaihanit 67050542 - Project Manager
-#### Pharadon Khanthong 67050569 - Cloud & DevOps Engineer
-#### Wichayada Thinkaew 67050577 - Embedded System Developer
-#### Anna Worrasing 67050586 - Embedded System Developer
+# Project Description
 
-# Project Description:
-#### โปรเจกต์นี้เป็นระบบ embedded และ cloud integration ที่พัฒนาขึ้นเพื่อเชื่อมต่อการทำงานระหว่างอุปกรณ์ hardware กับระบบ backend/cloud โดยมุ่งเน้นการสร้าง prototype ที่สามารถสื่อสารข้อมูลและแสดงผลการทำงานได้จริงภายใน Sprint 3
+NutriScan AI เป็นเว็บไซต์ต้นแบบที่ช่วยวิเคราะห์ข้อมูลโภชนาการจากภาพฉลากอาหาร โดยผู้ใช้สามารถอัปโหลดรูปฉลากอาหารเข้าสู่ระบบ จากนั้นระบบจะประมวลผลข้อมูลจากภาพ วิเคราะห์ข้อมูลทางโภชนาการ และแสดงผลลัพธ์ในรูปแบบที่เข้าใจง่าย เพื่อช่วยให้ผู้ใช้สามารถตรวจสอบข้อมูลทางโภชนาการและใช้ประกอบการตัดสินใจเลือกบริโภคอาหารได้สะดวกมากยิ่งขึ้น
 
-# Core Flow Statement:
-#### Kittiyanee: วางแผนและจัดการการทำงานของทีมให้ทุกส่วนสามารถพัฒนา prototype ได้ตาม Sprint Goal โดยติดตามความคืบหน้า แบ่ง task ให้เหมาะสมกับ role ของสมาชิก ประสานงานระหว่าง hardware, cloud และ embedded system รวมถึงจัดการ blocker ที่เกิดขึ้น เพื่อให้ระบบสามารถทำงานร่วมกันได้อย่างมีประสิทธิภาพและพร้อมสำหรับการ demo ใน Sprint 3
-#### Pharadon: พัฒนาและดูแลระบบ cloud และการเชื่อมต่อข้อมูลระหว่างอุปกรณ์ embedded กับ backend/server โดยออกแบบระบบสำหรับรับ ส่ง และจัดเก็บข้อมูลจากอุปกรณ์ IoT รวมถึงดูแล deployment, configuration และ integration ของระบบ เพื่อให้ข้อมูลสามารถส่งผ่านระหว่างอุปกรณ์และระบบส่วนกลางได้อย่างเสถียรและปลอดภัย
-#### Wichayada: พัฒนาและทดสอบระบบ embedded ที่ใช้ควบคุมอุปกรณ์และเซนเซอร์ต่าง ๆ ภายใน prototype โดยรับข้อมูลจาก hardware และประมวลผลเบื้องต้นก่อนส่งต่อไปยังระบบ cloud หรือส่วนอื่นของระบบ พร้อมทั้งตรวจสอบการทำงานของอุปกรณ์จริงให้สามารถทำงานได้ถูกต้องตาม core flow ของโปรเจกต์
-#### Anna: ออกแบบและพัฒนาโปรแกรมสำหรับอุปกรณ์ embedded เพื่อควบคุมการทำงานของ hardware ภายในระบบ รวมถึงเชื่อมต่อเซนเซอร์หรือโมดูลต่าง ๆ ให้สามารถทำงานร่วมกันได้อย่างถูกต้อง พร้อมทดสอบการรับส่งข้อมูลระหว่าง embedded system กับ cloud/server เพื่อสนับสนุนการทำงานของ prototype ให้สมบูรณ์และพร้อมใช้งานจริง
+# Core Flow Statement
 
-# Sprint Goal:
-#### พัฒนา prototype ระบบ embedded และ cloud integration ที่สามารถเชื่อมต่อการทำงานระหว่าง hardware, firmware และ backend ได้จริงภายใน Sprint 3 โดยทีมจะสามารถสาธิตการทำงานของระบบหลัก (Core Flow) ได้ผ่านการ demo พร้อมมีหลักฐานการทำงานของสมาชิกทุกคนอยู่ใน GitHub repository
+#### Kittiyanee Chaihanit (Project Manager)
 
-# Sprint 3 Contribution Plan:
-| Name | Role | Module/Task | Evidence | Evidence Location File |
-|---|---|---|---|---|
-| Kittiyanee | Project Manager | วางแผน Sprint, ติดตามงานทีม, จัดการ blocker และจัดทำ documentation | Sprint Goal, task breakdown, blocker log, README update | docs/evidence-log.md |
-| Pharadon | Cloud & DevOps Engineer | พัฒนาระบบ cloud และเชื่อมต่อข้อมูลระหว่าง embedded กับ server | Cloud configuration, integration note, deployment screenshot | backend/cloud-config.md |
-| Wichayada | Embedded System Developer | พัฒนาและทดสอบการทำงานของ embedded system และ sensor | Hardware photo, firmware file, serial monitor screenshot | firmware/device-test.md |
-| Anna | Embedded System Developer | พัฒนาโปรแกรมสำหรับ embedded และเชื่อมต่อ hardware กับ cloud system | Firmware source code, connection test result, hardware integration note | firmware/connection-log.md |
+รับผิดชอบการวางแผน Sprint ติดตามความคืบหน้าของทีม ประสานงานระหว่างสมาชิก จัดการเอกสารและหลักฐานการดำเนินงาน รวมถึงดูแลให้การพัฒนาเป็นไปตามเป้าหมายของ Sprint และพร้อมสำหรับการสาธิตระบบ
+
+#### Pharadon Khanthong (Frontend Developer)
+
+รับผิดชอบการพัฒนาหน้าเว็บไซต์สำหรับการอัปโหลดรูปฉลากอาหาร การแสดงผลข้อมูลโภชนาการ และการเชื่อมต่อระหว่างส่วนติดต่อผู้ใช้กับระบบ Backend เพื่อให้ผู้ใช้สามารถใช้งานระบบได้อย่างสะดวกและมีประสิทธิภาพ
+
+#### Wichayada Thinkaew (UX/UI Designer)
+
+รับผิดชอบการออกแบบ User Interface และ User Experience ของระบบ จัดทำ User Flow ออกแบบ Layout และโครงสร้างการแสดงผลข้อมูล เพื่อให้ผู้ใช้สามารถเข้าใจและใช้งานระบบได้ง่าย
+
+#### Anna Worrasing (Backend Developer)
+
+รับผิดชอบการพัฒนาระบบ Backend สำหรับรองรับการรับส่งข้อมูล การประมวลผลข้อมูลที่เกี่ยวข้องกับฉลากโภชนาการ และการส่งผลลัพธ์กลับไปยังหน้าเว็บไซต์เพื่อแสดงผลแก่ผู้ใช้
+
+# Sprint Goal
+
+พัฒนา Prototype ของ NutriScan AI ที่สามารถอัปโหลดรูปฉลากอาหาร ประมวลผลข้อมูล และแสดงผลลัพธ์ผ่านเว็บไซต์ได้ พร้อมมีหลักฐานการทำงานของสมาชิกทุกคนใน GitHub Repository และสามารถสาธิตการทำงานตาม Core Flow ของระบบได้ภายใน Sprint 3
+
+# Scope Adjustment
+
+ในช่วงเริ่มต้นของการวางแผนโครงการ ทีมมีแนวคิดในการพัฒนาระบบที่มีขอบเขตการทำงานกว้างและรองรับฟังก์ชันเพิ่มเติมหลายส่วน อย่างไรก็ตาม หลังจากประเมินระยะเวลา ทรัพยากร และความเป็นไปได้ในการพัฒนา ทีมได้ตัดสินใจปรับขอบเขตงานให้เหมาะสมกับเป้าหมายของ Sprint 3 โดยมุ่งเน้นการพัฒนา Website Prototype ของ NutriScan AI และให้ความสำคัญกับ Core Flow หลักของระบบ ได้แก่ การอัปโหลดภาพฉลากอาหาร การประมวลผลข้อมูล และการแสดงผลลัพธ์แก่ผู้ใช้ เพื่อให้สามารถพัฒนา ทดสอบ และสาธิตการทำงานของระบบได้อย่างสมบูรณ์ภายในระยะเวลาที่กำหนด
+
+# Sprint 3 Contribution Plan
+
+| Name                 | Role               | Module/Task                                                                         | Evidence                                      | Evidence Location File |
+| -------------------- | ------------------ | ----------------------------------------------------------------------------------- | --------------------------------------------- | ---------------------- |
+| Kittiyanee Chaihanit | Project Manager    | วางแผน Sprint, ติดตามความคืบหน้า, จัดการ Documentation และรวบรวมหลักฐานการดำเนินงาน | README Update, Sprint Evidence, Documentation | docs/evidence-log.md   |
+| Pharadon Khanthong   | Frontend Developer | พัฒนาหน้าเว็บไซต์สำหรับอัปโหลดรูปและแสดงผลข้อมูลโภชนาการ                            | Frontend Source Code, UI Screenshot           | frontend/              |
+| Wichayada Thinkaew   | UX/UI Designer     | ออกแบบ User Flow, Layout และจัดทำ UX/UI Documentation                               | UX/UI Documentation, README Update            | ux-ui/README.md        |
+| Anna Worrasing       | Backend Developer  | พัฒนา Backend และจัดการการประมวลผลข้อมูลภายในระบบ                                   | Backend Source Code, Backend Documentation    | backend/               |
