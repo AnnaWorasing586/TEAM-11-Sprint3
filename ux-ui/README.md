@@ -287,3 +287,21 @@ Frontend Display
 MIT License
 
 สามารถใช้งาน แก้ไข และพัฒนาต่อยอดได้อย่างอิสระ
+
+---
+
+# 🖥️ Main Screens
+
+### Home Page
+- แนะนำระบบ NutriScan AI
+- ปุ่มเริ่มต้นสแกนฉลาก
+
+### Upload Page
+- อัปโหลดหรือถ่ายรูปฉลากอาหาร
+
+### Analysis Result Page
+- แสดง Calories
+- แสดง Sugar
+- แสดง Fat
+- แสดง Protein
+- แสดงผลการวิเคราะห์สุขภาพ
