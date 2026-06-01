@@ -74,6 +74,8 @@ class _ScanPageState extends State<ScanPage> {
                 protein: data['protein'] ?? 24.5,
                 carbs: data['carbs'] ?? 45.0,       
                 fat: data['fat'] ?? 8.2,
+                sugar: data['sugar'] ?? 1.0,
+                sodium: data['sodium'] ?? 2,
               ),
             ),
           );
