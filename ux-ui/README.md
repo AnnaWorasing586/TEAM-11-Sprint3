@@ -70,51 +70,31 @@ NutriScan AI คือระบบ AI สำหรับสแกนฉลาก
 ```text
 User
   ↓
-Frontend (React / Next.js)
+Web Application
   ↓
 Upload Nutrition Label Image
   ↓
-Backend API (FastAPI)
+Backend Processing
   ↓
-OCR Engine
-  ↓
-AI Nutrition Parser
+OCR Processing
   ↓
 Nutrition Analysis
   ↓
-JSON Response
-  ↓
-Frontend Dashboard
+Result Display
 ```
+
 
 ---
 
 # 📁 Project Structure
 
 ```text
-nutriscan-ai/
+TEAM-11-Sprint3/
 │
 ├── frontend/
-│   ├── components/
-│   ├── pages/
-│   ├── services/
-│   ├── styles/
-│   └── package.json
-│
 ├── backend/
-│   ├── app/
-│   │   ├── main.py
-│   │   ├── routes/
-│   │   ├── services/
-│   │   └── models/
-│   │
-│   ├── requirements.txt
-│   └── .env
-│
+├── ux-ui/
 ├── docs/
-│   ├── integration-map.md
-│   └── api-spec.md
-│
 └── README.md
 ```
 
