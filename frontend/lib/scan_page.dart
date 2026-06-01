@@ -70,6 +70,10 @@ class _ScanPageState extends State<ScanPage> {
                 colorStr: data['color'] ?? 'green',
                 score: data['score'] ?? 90,
                 recommendation: data['recommendation'] ?? '',
+                calories: data['calories'] ?? 350,
+                protein: data['protein'] ?? 24.5,
+                carbs: data['carbs'] ?? 45.0,       
+                fat: data['fat'] ?? 8.2,
               ),
             ),
           );
