@@ -80,7 +80,6 @@ class HomePage extends StatelessWidget {
                     vertical: 16,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderSide: BorderSide.none,
                     borderRadius: BorderRadius.circular(30), // ทำปุ่มให้ขอบมนสวยงาม
                   ),
                   elevation: 3, // ใส่เงาให้ปุ่มดูมีมิติ
