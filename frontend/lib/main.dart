@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'scan_page.dart';
+import 'home_page.dart';
 
 void main() {
   runApp(const NutriScanApp());
