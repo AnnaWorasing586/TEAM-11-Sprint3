@@ -128,7 +128,7 @@ uvicorn app.main:app --reload
 Backend running at:
 
 ```text
-http://localhost:8000
+http://localhost:8080
 ```
 
 ---
