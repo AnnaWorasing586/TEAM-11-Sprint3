@@ -1,10 +1,10 @@
-# 🥗 NutriScan AI
+## 🍜 NutriScan AI
 
 NutriScan AI คือระบบ AI สำหรับสแกนฉลากโภชนาการอาหารจากภาพ เพื่อช่วยให้ผู้ใช้เข้าใจข้อมูลโภชนาการได้ง่ายและรวดเร็วมากขึ้น โดยระบบจะใช้ OCR และ AI ในการอ่าน วิเคราะห์ และสรุปข้อมูลสุขภาพอาหารอัตโนมัติ
 
 ---
 
-# 📌 Overview
+## 📌 Overview
 
 ผู้ใช้สามารถอัปโหลดหรือถ่ายรูปฉลากโภชนาการอาหาร จากนั้นระบบจะทำการ:
 
@@ -17,7 +17,7 @@ NutriScan AI คือระบบ AI สำหรับสแกนฉลาก
 
 ---
 
-# 👤 User Flow
+## 👤 User Flow
 
 1. ผู้ใช้อัปโหลดหรือถ่ายรูปฉลากโภชนาการ
 2. ระบบ OCR อ่านข้อมูลจากภาพ
@@ -27,7 +27,7 @@ NutriScan AI คือระบบ AI สำหรับสแกนฉลาก
 
 ---
 
-# ✨ Features
+## ✨ Features
 
 - 📷 อัปโหลดหรือถ่ายภาพฉลากโภชนาการ
 - 🔍 OCR อ่านข้อความจากภาพ
@@ -40,32 +40,32 @@ NutriScan AI คือระบบ AI สำหรับสแกนฉลาก
 
 ---
 
-# 🧰 Tech Stack
+## 🧰 Tech Stack
 
-## Frontend
+### Frontend
 - React / Next.js
 - Tailwind CSS
 - Axios
 
-## Backend
+### Backend
 - FastAPI (Python)
 - Pydantic
 - Python-dotenv
 
-## AI / OCR
+### AI / OCR
 - Tesseract OCR / EasyOCR
 - GPT-based AI Model
 
-## Database (Optional)
+### Database (Optional)
 - MongoDB / PostgreSQL
 
-## Deployment
+### Deployment
 - Frontend: Vercel / Netlify
 - Backend: Render
 
 ---
 
-# 🏗️ Architecture
+## 🏗️ Architecture
 
 ```text
 User
@@ -86,7 +86,7 @@ Result Display
 
 ---
 
-# 📁 Project Structure
+## 📁 Project Structure
 
 ```text
 TEAM-11-Sprint3/
@@ -100,18 +100,18 @@ TEAM-11-Sprint3/
 
 ---
 
-# 🚀 Quick Start (Local Development)
+## 🚀 Quick Start (Local Development)
 
-## 1. Clone Repository
+### 1. Clone Repository
 
 ```bash
-git clone https://github.com/your-username/nutriscan-ai.git
-cd nutriscan-ai
+git clone https://github.com/AnnaWorasing586/TEAM-11-Sprint3.git
+cd TEAM-11-Sprint3
 ```
 
 ---
 
-## 2. Backend Setup
+### 2. Backend Setup
 
 ```bash
 cd backend
@@ -133,7 +133,7 @@ http://localhost:8080
 
 ---
 
-## 3. Frontend Setup
+### 3. Frontend Setup
 
 ```bash
 cd frontend
@@ -151,23 +151,23 @@ http://localhost:3000
 
 ---
 
-# 🌐 Deployment (Render)
+## 🌐 Deployment (Render)
 
-## Backend Deployment
+### Backend Deployment
 
-### Build Command
+#### Build Command
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### Start Command
+#### Start Command
 
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port 10000
 ```
 
-### Environment Variables
+#### Environment Variables
 
 ```env
 OPENAI_API_KEY=your_api_key
@@ -175,9 +175,9 @@ OPENAI_API_KEY=your_api_key
 
 ---
 
-# 🔌 API Endpoints
+## 🔌 API Endpoints
 
-## Health Check
+### Health Check
 
 ```http
 GET /health
@@ -193,7 +193,7 @@ Response:
 
 ---
 
-## Scan Nutrition Label
+### Scan Nutrition Label
 
 ```http
 POST /api/scan
@@ -222,7 +222,7 @@ Response:
 
 ---
 
-# 🎨 Design Highlights
+## 🎨 Design Highlights
 
 - UI ใช้งานง่าย เน้นการสแกนและดูผลลัพธ์ทันที
 - รองรับ Drag & Drop Upload
@@ -233,7 +233,7 @@ Response:
 
 ---
 
-# 🎯 UX Design Goals
+## 🎯 UX Design Goals
 
 - ลดขั้นตอนการใช้งานให้เหลือน้อยที่สุด
 - ผู้ใช้สามารถสแกนและดูผลลัพธ์ได้ภายในไม่กี่วินาที
@@ -243,7 +243,7 @@ Response:
 
 ---
 
-# 📊 Integration Flow
+## 📊 Integration Flow
 
 ```text
 Frontend
@@ -263,7 +263,7 @@ Frontend Display
 
 ---
 
-# 📄 License
+## 📄 License
 
 MIT License
 
@@ -271,16 +271,16 @@ MIT License
 
 ---
 
-# 🖥️ Main Screens
+## 🖥️ Main Screens
 
-### Home Page
+#### Home Page
 - แนะนำระบบ NutriScan AI
 - ปุ่มเริ่มต้นสแกนฉลาก
 
-### Upload Page
+#### Upload Page
 - อัปโหลดหรือถ่ายรูปฉลากอาหาร
 
-### Analysis Result Page
+#### Analysis Result Page
 - แสดง Calories
 - แสดง Sugar
 - แสดง Fat
