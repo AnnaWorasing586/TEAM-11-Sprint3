@@ -4,13 +4,11 @@
   </a>
 </p>
 
-<h1 align="center">NutriScan AI</h1>
+<h1 align="center">🍜 NutriScan AI</h1>
 
 <p align="center">
 AI system for scanning nutrition labels from images using OCR and AI summarization
 </p>
-
-## 🍜 NutriScan AI
 
 NutriScan AI คือระบบ AI สำหรับสแกนฉลากโภชนาการอาหารจากภาพ เพื่อช่วยให้ผู้ใช้เข้าใจข้อมูลโภชนาการได้ง่ายและรวดเร็วมากขึ้น โดยระบบจะใช้ OCR และ AI ในการอ่าน วิเคราะห์ และสรุปข้อมูลสุขภาพอาหารอัตโนมัติ
 
