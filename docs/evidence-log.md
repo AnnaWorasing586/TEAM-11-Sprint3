@@ -1,142 +1,93 @@
-# 📌 Sprint 3 Evidence — NutriScan AI
+📌 Sprint 3 Evidence — NutriScan AI (CP5 Submission)
+🗓️ Day 1 — Project Setup & Planning (26 May 2026)
+ผู้รับผิดชอบ	บทบาท	สิ่งที่ทำ	หลักฐาน
+Kittiyanee Chaihanit	Project Manager / Scrum Lead	วางแผน Sprint 3, กำหนด Sprint Goal, จัด Sprint Board และแบ่งงานตาม Role	Sprint Planning, Sprint Board
+Pharadon Khanthong	Frontend Developer	จัดเตรียมโครงสร้าง Frontend และวางแผนหน้า Upload และ Result Dashboard	GitHub Commit
+Wichayada Thinkaew	Backend Support & UX/UI Designer	ออกแบบ User Flow, Wireframe และ UI Prototype ของระบบ NutriScan AI	Figma Design
+Anna Worrasing	Backend Developer	เตรียม Backend Environment (FastAPI) และทดลอง OCR สำหรับอ่านฉลากโภชนาการ	GitHub Commit, OCR Test Screenshot
+Day 1 Output
+กำหนด Sprint Goal และ Sprint Scope อย่างชัดเจน
+แบ่งบทบาททีม (Roles) ครบถ้วน
+ออกแบบ User Flow และ UI Prototype เสร็จสมบูรณ์
+เริ่มพัฒนา Backend และ OCR Module
+สร้างโครงสร้างโปรเจกต์บน GitHub
+🗓️ Day 2 — First Working Component (27 May 2026)
+ผู้รับผิดชอบ	บทบาท	สิ่งที่ทำ	หลักฐาน
+Kittiyanee Chaihanit	Project Manager / Scrum Lead	ติดตามความคืบหน้าและอัปเดต Sprint Board	Sprint Board Screenshot
+Pharadon Khanthong	Frontend Developer	พัฒนา Upload Image Page และ Result Dashboard เบื้องต้น	UI Screenshot
+Wichayada Thinkaew	Backend Support & UX/UI Designer	ปรับปรุง UI Design และสนับสนุนการเชื่อมต่อ Frontend–Backend	Figma Update
+Anna Worrasing	Backend Developer	พัฒนา API สำหรับรับภาพและเชื่อม OCR เพื่อดึงข้อมูลจากฉลากโภชนาการ	API Response, OCR Output Screenshot
+Day 2 Output
+มี First Working Component สำหรับทดสอบระบบ
+Frontend สามารถอัปโหลดภาพได้
+Backend สามารถรับและประมวลผลภาพได้
+OCR เริ่มดึงข้อความจากฉลากโภชนาการได้
+เริ่มการเชื่อมต่อ Frontend และ Backend
+🗓️ Day 3 — Integration & Risk Control (28 May 2026)
+ผู้รับผิดชอบ	บทบาท	สิ่งที่ทำ	หลักฐาน
+Kittiyanee Chaihanit	Project Manager / Scrum Lead	ติดตาม Integration Progress และบริหารความเสี่ยงของระบบ	Sprint Documentation
+Pharadon Khanthong	Frontend Developer	ปรับปรุง Dashboard และเชื่อมต่อข้อมูลจาก Backend	UI Screenshot
+Wichayada Thinkaew	Backend Support & UX/UI Designer	ปรับปรุง UX/UI และตรวจสอบความถูกต้องของ User Flow	Figma Prototype
+Anna Worrasing	Backend Developer	เชื่อม OCR, Firebase และ Backend Logic เข้ากับ Core System	API Test Result, Firebase Integration Screenshot
+Day 3 Output
+ระบบ Frontend และ Backend เชื่อมต่อกันสมบูรณ์
+ระบบสามารถรับภาพและแสดงผลข้อมูลโภชนาการได้
+ใช้ Firebase สำหรับการจัดเก็บข้อมูล
+Core Flow ทำงานแบบ End-to-End
+ระบบพร้อมสำหรับการ Demo Prototype
+🗓️ Day 4 — Demo Evidence & CP5 Submission (30 May 2026)
+ผู้รับผิดชอบ	บทบาท	สิ่งที่ทำ	หลักฐาน
+Kittiyanee Chaihanit	Project Manager / Scrum Lead	สรุป Sprint Review, Retrospective และจัดทำ CP5 Submission Package	Sprint Review Document
+Pharadon Khanthong	Frontend Developer	ตรวจสอบ Upload Flow และ Result Dashboard สำหรับ Demo	UI Screenshot, Demo Video
+Wichayada Thinkaew	Backend Support & UX/UI Designer	ตรวจสอบ UI Consistency และจัดทำ Demo Script	demo-script.md
+Anna Worrasing	Backend Developer	ทดสอบ OCR, Backend API และ Firebase Integration พร้อมสรุป Known Issues	API Test Result, Integration Screenshot
+Day 4 Output
+Prototype v1 พร้อม Demo ที่ใช้งานได้จริง
+Core Flow (Upload → OCR → Nutrition Analysis → Result Display) สมบูรณ์
+จัดทำ Sprint Documentation และ Evidence ครบถ้วน
+สรุป Known Issues และ Sprint 4 Test Plan
+จัดทำ CP5 Submission Package สำหรับการประเมิน
+📉 Scope Adjustment During Sprint 3
 
----
+เพื่อให้สามารถส่งมอบ Prototype v1 ที่มีความเสถียรภายในระยะเวลา Sprint 3 ทีมได้ปรับลดขอบเขตงานบางส่วน เพื่อมุ่งเน้นการพัฒนา Core System หลักให้เสร็จสมบูรณ์
 
-# 🗓️ Day 1 — Project Setup & Planning (26 May 2026)
+Original Scope
+Mobile Application
+OCR-based Nutrition Label Scanning
+AI Nutrition Analysis
+Firebase Integration
+Traffic Light Nutrition Indicator
+Adjusted Scope
+Web-based Prototype (แทน Mobile Application)
+OCR Integration
+Backend API Development
+Firebase Integration
+Nutrition Analysis Workflow
+Result Dashboard (Traffic Light Indicator)
+Reason for Scope Adjustment
 
-| ผู้รับผิดชอบ                                          | สิ่งที่ทำ                                                                             | หลักฐาน                            |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------- | ---------------------------------- |
-| Kittiyanee Chaihanit (Project Manager / Scrum Lead)   | วางแผน Sprint 3, กำหนด Sprint Goal, จัด Sprint Board และแบ่งงานตาม Role               | Sprint Planning, Sprint Board      |
-| Pharadon Khanthong (Frontend Developer)               | จัดเตรียมโครงสร้าง Frontend Project และวางแผนการพัฒนาหน้า Upload และ Result Dashboard | GitHub Commit                      |
-| Wichayada Thinkaew (Backend Support / UX/UI Designer) | ออกแบบ User Flow, Wireframe และ UI Prototype ของ NutriScan AI                         | Figma Design                       |
-| Anna Worrasing (Backend Developer)                    | จัดเตรียม Backend Environment, FastAPI และทดลอง OCR สำหรับอ่านข้อมูลจากฉลากโภชนาการ   | GitHub Commit, OCR Test Screenshot |
+การปรับลด scope มีวัตถุประสงค์เพื่อให้ทีมสามารถส่งมอบ Core Flow ที่เสถียรและครบถ้วนภายใน Sprint 3 รวมถึงรองรับการทดสอบใน Sprint ถัดไป
 
-### Day 1 Output
-
-* กำหนด Sprint Goal และ Scope ของ Sprint 3
-* แบ่งหน้าที่สมาชิกตาม Role
-* ออกแบบ User Flow และ UI Prototype
-* เริ่มต้นพัฒนา Backend และ OCR Module
-* สร้างโครงสร้างโปรเจกต์บน GitHub
-
----
-
-# 🗓️ Day 2 — First Working Component (27 May 2026)
-
-| ผู้รับผิดชอบ         | สิ่งที่ทำ                                                            | หลักฐาน                             |
-| -------------------- | -------------------------------------------------------------------- | ----------------------------------- |
-| Kittiyanee Chaihanit | ติดตามความคืบหน้า Sprint และอัปเดต Sprint Board                      | Sprint Board Screenshot             |
-| Pharadon Khanthong   | พัฒนาหน้า Upload Image และหน้าแสดงผลเบื้องต้น                        | UI Screenshot                       |
-| Wichayada Thinkaew   | ปรับปรุง UI Design และสนับสนุนการเชื่อมต่อ Frontend กับ Backend      | Figma Update                        |
-| Anna Worrasing       | พัฒนา API สำหรับรับรูปภาพและเชื่อม OCR เพื่อดึงข้อมูลจากฉลากโภชนาการ | API Response, OCR Output Screenshot |
-
-### Day 2 Output
-
-* มี First Working Component สำหรับทดสอบ
-* Frontend สามารถอัปโหลดรูปภาพได้
-* Backend สามารถรับข้อมูลภาพได้
-* OCR เริ่มดึงข้อความจากฉลากโภชนาการได้
-* Frontend และ Backend เริ่มเชื่อมต่อกันได้
-
----
-
-# 🗓️ Day 3 — Integration & Risk Control (28–29 May 2026)
-
-| ผู้รับผิดชอบ         | สิ่งที่ทำ                                                            | หลักฐาน                                          |
-| -------------------- | -------------------------------------------------------------------- | ------------------------------------------------ |
-| Kittiyanee Chaihanit | ติดตาม Integration Progress และจัดการความเสี่ยงของ Sprint            | Sprint Documentation                             |
-| Pharadon Khanthong   | ปรับปรุง Dashboard และเชื่อมต่อข้อมูลจาก Backend เข้าสู่ Frontend    | UI Screenshot                                    |
-| Wichayada Thinkaew   | ปรับปรุง UX/UI และตรวจสอบความถูกต้องของ User Flow                    | Figma Prototype                                  |
-| Anna Worrasing       | เชื่อม OCR, Firebase และ Backend Logic เข้ากับ Core Flow หลักของระบบ | API Test Result, Firebase Integration Screenshot |
-
-### Day 3 Output
-
-* Frontend และ Backend เชื่อมต่อกันได้
-* ระบบสามารถรับรูปภาพและแสดงผลข้อมูลโภชนาการได้
-* Firebase ถูกนำมาใช้ในการจัดเก็บข้อมูล
-* Core Flow เริ่มทำงานได้แบบ End-to-End
-* เตรียมระบบสำหรับการ Demo Prototype
-
----
-
-# 🗓️ Day 4 — Demo Evidence & CP5 Submission (30 May 2026)
-
-| ผู้รับผิดชอบ         | สิ่งที่ทำ                                                              | หลักฐาน                                 |
-| -------------------- | ---------------------------------------------------------------------- | --------------------------------------- |
-| Kittiyanee Chaihanit | สรุป Sprint Review, Retrospective และจัดเตรียม CP5 Submission Package  | Sprint Review Document                  |
-| Pharadon Khanthong   | ตรวจสอบ Upload Flow และ Result Dashboard สำหรับการ Demo                | UI Screenshot, Demo Video               |
-| Wichayada Thinkaew   | ตรวจสอบ User Flow, UI Consistency และจัดทำ Demo Script                 | demo-script.md                          |
-| Anna Worrasing       | ทดสอบ OCR, Backend API และ Firebase Integration พร้อมสรุป Known Issues | API Test Result, Integration Screenshot |
-
-### Day 4 Output
-
-* Prototype v1 สามารถ Demo Core Flow ได้
-* Upload Image → OCR → Nutrition Analysis → Result Display ทำงานได้
-* จัดทำ Demo Evidence และ Documentation ครบถ้วน
-* จัดทำ Build Log, Known Issues และ Sprint 4 Test Plan
-* สรุป Sprint Review และ Retrospective
-* เตรียม CP5 Submission Package สำหรับส่งตรวจ
-
----
-
-# 📉 Scope Adjustment During Sprint 3
-
-เพื่อให้สามารถส่งมอบ Prototype v1 ที่ทำงานได้จริงภายในระยะเวลาของ Sprint 3 ทีมได้ปรับลดขอบเขตงานบางส่วน
-
-### Original Scope
-
-* Mobile Application
-* OCR-based Nutrition Label Scanning
-* AI Nutrition Analysis
-* Firebase Integration
-* Traffic Light Nutrition Indicator
-
-### Adjusted Scope
-
-Mobile Application Version ถูกตัดออกจาก Sprint 3
-
-ทีมมุ่งเน้นการพัฒนา
-
-* Web-based Prototype
-* OCR Integration
-* Backend API Development
-* Firebase Integration
-* Nutrition Analysis Workflow
-* Traffic Light Result Dashboard
-
-### Reason for Scope Reduction
-
-เพื่อให้ทีมสามารถพัฒนา Core Flow หลักให้เสร็จสมบูรณ์และพร้อมสำหรับการ Demo รวมถึงการทดสอบกับผู้ใช้จริงใน Sprint 4
-
-### Impact
-
-* Prototype v1 รองรับการใช้งานผ่าน Web Browser เท่านั้น
-* Mobile Application จะถูกพิจารณาใน Sprint ถัดไป
-* ทีมสามารถพัฒนาและเชื่อมต่อ Core Flow ได้สำเร็จ
-
----
-
-# 🔗 Evidence Links
-
-* GitHub Repository: https://github.com/AnnaWorasing586/TEAM-11-Sprint3
-* Demo Video: [Insert Demo Link]
-* Core Flow Documentation: docs/core-flow.md
-* Demo Script: docs/demo-script.md
-* Build Log: docs/build-log.md
-* Known Issues: docs/known-issues.md
-* Sprint 4 Test Plan: docs/test-plan-sprint4.md
-
----
-
-# 📸 Evidence Types
-
-* GitHub Commit
-* UI Screenshot
-* API Response Test
-* OCR Output Screenshot
-* Firebase Integration Evidence
-* Figma Design
-* Sprint Board
-* Demo Video
-* Integration Test
-* Project Documentation
+Impact
+Prototype v1 ใช้งานผ่าน Web Browser เท่านั้น
+Mobile Application จะถูกพิจารณาใน Sprint ถัดไป
+ทีมสามารถส่งมอบ End-to-End Core Flow ได้สำเร็จ
+🔗 Evidence Links
+GitHub Repository: https://github.com/AnnaWorasing586/TEAM-11-Sprint3
+Demo Video: To be submitted in CP5 final package
+Core Flow Documentation: docs/core-flow.md
+Demo Script: docs/demo-script.md
+Build Log: docs/build-log.md
+Known Issues: docs/known-issues.md
+Sprint 4 Test Plan: docs/test-plan-sprint4.md
+📸 Evidence Types
+GitHub Commit
+UI Screenshot
+API Response Test
+OCR Output Screenshot
+Firebase Integration Evidence
+Figma Design
+Sprint Board
+Demo Video
+Integration Test
+Project Documentation
