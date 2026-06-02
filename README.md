@@ -11,18 +11,19 @@ NutriScan AI คือระบบ AI สำหรับสแกนฉลาก
 - อ่านข้อความจากภาพด้วย OCR
 - แปลงข้อมูลให้อยู่ในรูปแบบโภชนาการ
 - วิเคราะห์คุณค่าทางอาหาร
-- สรุปผลให้อ่านง่าย เช่น น้ำตาลสูง โซเดียมสูง หรือเหมาะกับสุขภาพหรือไม่
+- ใช้ AI (LLM-based summarization) เพื่อสรุปผลในภาษาที่เข้าใจง่าย
+- แสดงผลลัพธ์พร้อมคำแนะนำด้านสุขภาพ
 
-เป้าหมายของโปรเจคคือช่วยให้การอ่านฉลากโภชนาการเป็นเรื่องง่าย เข้าถึงได้ และใช้เวลาเพียงไม่กี่วินาที
+เป้าหมายของโปรเจกต์คือช่วยให้การอ่านฉลากโภชนาการเป็นเรื่องง่าย เข้าถึงได้ และใช้เวลาเพียงไม่กี่วินาที
 
 ---
 
 ## 👤 User Flow
 
 1. ผู้ใช้อัปโหลดหรือถ่ายรูปฉลากโภชนาการ
-2. ระบบ OCR อ่านข้อมูลจากภาพ
-3. ระบบ AI วิเคราะห์ข้อมูลโภชนาการ
-4. ระบบสรุปผลด้านสุขภาพ
+2. ระบบส่งภาพไปยัง Backend API
+3. ระบบ OCR อ่านข้อมูลจากภาพ
+4. AI วิเคราะห์และสรุปผลสุขภาพ
 5. ผู้ใช้ดูผลลัพธ์และคำแนะนำ
 
 ---
@@ -33,8 +34,8 @@ NutriScan AI คือระบบ AI สำหรับสแกนฉลาก
 - 🔍 OCR อ่านข้อความจากภาพ
 - 🤖 AI วิเคราะห์ข้อมูลโภชนาการ
 - 🧠 สรุปผลสุขภาพอาหารอัตโนมัติ
-- 📊 แสดงข้อมูล Sodium, Sugar
-- ⚡ ประมวลผลแบบเรียลไทม์
+- 📊 แสดงข้อมูล Calories, Sugar, Fat, Protein, Sodium
+- ⚡ ระบบประมวลผลแบบ near real-time
 - 💻 รองรับการใช้งานผ่านเว็บเบราว์เซอร์
 - 📱 อยู่ระหว่างพัฒนาเพื่อรองรับอุปกรณ์มือถือ
 
@@ -52,12 +53,15 @@ NutriScan AI คือระบบ AI สำหรับสแกนฉลาก
 - Pydantic
 - Python-dotenv
 
-### AI / OCR
-- Tesseract OCR / EasyOCR
-- GPT-based AI Model
+### OCR
+- Tesseract OCR (primary engine)
 
-### Database (Optional)
-- MongoDB / PostgreSQL
+### AI Layer
+- GPT-based LLM (OpenAI API) for nutrition summarization
+- Rule-based parsing for structured nutrition extraction
+
+## Database (optional / future scope)
+- Firebase Firestore
 
 ### Deployment
 - Frontend: Vercel / Netlify
@@ -65,24 +69,27 @@ NutriScan AI คือระบบ AI สำหรับสแกนฉลาก
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ System Architecture
 
 ```text
 User
   ↓
-Web Application
+Web Application (React)
   ↓
-Upload Nutrition Label Image
+Upload Image (multipart/form-data)
   ↓
-Backend Processing
+FastAPI Backend
   ↓
-OCR Processing
+Tesseract OCR Processing
   ↓
-Nutrition Analysis
+Nutrition Data Parsing
   ↓
-Result Display
+AI Summarization Layer
+  ↓
+Structured Nutrition Result
+  ↓
+Frontend Dashboard Display
 ```
-
 
 ---
 
@@ -113,17 +120,20 @@ cd TEAM-11-Sprint3
 
 ### 2. Backend Setup
 
-```bash
 cd backend
 
 python -m venv venv
 
-# Activate virtual environment
+# activate virtual environment
+# Windows:
+venv\Scripts\activate
+
+# Mac/Linux:
+source venv/bin/activate
 
 pip install -r requirements.txt
 
-uvicorn app.main:app --reload
-```
+uvicorn app.main:app --reload --port 8080
 
 Backend running at:
 
@@ -203,7 +213,10 @@ Request:
 
 ```json
 {
-  "image": "file"
+  Content-Type: multipart/form-data
+
+  Field:
+  - image: file upload
 }
 ```
 
@@ -216,7 +229,7 @@ Response:
   "sugar": "30g",
   "fat": "12g",
   "protein": "5g",
-  "analysis": "High sugar content. Consume moderately."
+  "analysis": "High sugar content. Recommend moderation."
 }
 ```
 
@@ -263,12 +276,23 @@ Frontend Display
 
 ---
 
-## 📄 License
+## 📄 Scope Adjustment
+### 🔴 Original Scope
+- Mobile Application
+- การเชื่อมต่อ Firebase
 
-MIT License
+### 🟢 Final Implemented Scope
+- ระบบ Web Browser แทน Mobile Application
+- OCR + Data Parsing + AI Summarization Pipeline สำหรับวิเคราะห์ข้อมูลโภชนาการ
 
-สามารถใช้งาน แก้ไข และพัฒนาต่อยอดได้อย่างอิสระ
+### 🎯 Reason for Adjustment
+เพื่อให้สามารถส่งมอบ Prototype ที่เสถียรและทำงานได้ครบ End-to-End ภายในระยะเวลา Sprint 3
 
+### 📌 Impact
+- ระบบใช้งานผ่าน Web Browser เท่านั้น
+- การพัฒนา Mobile Application ถูกเลื่อนไป Sprint ถัดไป
+- Core Flow ทำงานได้สมบูรณ์ครบทุกขั้นตอน
+- 
 ---
 
 ## 🖥️ Main Screens
@@ -285,4 +309,26 @@ MIT License
 - แสดง Sugar
 - แสดง Fat
 - แสดง Protein
+- แสดง Sodium
 - แสดงผลการวิเคราะห์สุขภาพ
+
+---
+
+## 📸 Evidence Artifacts
+- GitHub commits
+- UI screenshots
+- API test results
+- OCR output samples
+- Figma design files
+- Sprint board tracking
+- Integration test results
+- Documentation logs
+- Demo video presentation
+
+---
+
+## 📄 License
+
+MIT License
+
+สามารถใช้งาน แก้ไข และพัฒนาต่อยอดได้อย่างอิสระ
