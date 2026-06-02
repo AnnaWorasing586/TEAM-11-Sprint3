@@ -104,7 +104,7 @@
 ## 🔗 Evidence Links
 
 - GitHub Repository: https://github.com/AnnaWorasing586/TEAM-11-Sprint3  
-- Demo Video: To be submitted in CP5 final package  
+- Demo Video: `assets/demo-videos-links.md` 
 - Core Flow Docs: `docs/core-flow.md`  
 - Demo Script: `docs/demo-script.md`  
 - Build Log: `docs/build-log.md`  
