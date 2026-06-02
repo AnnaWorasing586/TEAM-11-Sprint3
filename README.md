@@ -304,7 +304,7 @@ Frontend Display
 - ระบบใช้งานผ่าน Web Browser เท่านั้น
 - การพัฒนา Mobile Application ถูกเลื่อนไป Sprint ถัดไป
 - Core Flow ทำงานได้สมบูรณ์ครบทุกขั้นตอน
-- 
+
 ---
 
 ## 🖥️ Main Screens
