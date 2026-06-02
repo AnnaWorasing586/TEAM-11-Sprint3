@@ -120,6 +120,8 @@ cd TEAM-11-Sprint3
 
 ### 2. Backend Setup
 #### แบบ Windows
+
+```bash
 cd backend
 
 python -m venv venv
@@ -129,8 +131,11 @@ venv\Scripts\activate
 pip install -r requirements.txt
 
 uvicorn app.main:app --reload --port 8080
+```
 
 #### แบบ Mac/Linux
+
+```bash
 cd backend
 
 python -m venv venv
@@ -140,6 +145,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 uvicorn app.main:app --reload --port 8080
+```
 
 Backend running at:
 
