@@ -1,13 +1,13 @@
 <p align="center">
-  <a href="https://ai-nutri-scan.netlify.app/">
-    <img src="https://annaworasing586.github.io/TEAM-11-Sprint3/" />
+  <a href="https://annaworasing586.github.io/TEAM-11-Sprint3/">
+    <img src="https://img.shields.io/badge/NutriScan%20AI-Live%20Demo-green?style=for-the-badge" />
   </a>
 </p>
 
-<h1 align="center">🍜 NutriScan AI</h1>
+<h1 align="center">🍜 NutriScan AI 🥢</h1>
 
 <p align="center">
-AI system for scanning nutrition labels from images using OCR and AI summarization
+AI system for scanning nutrition labels using OCR and AI summarization
 </p>
 
 NutriScan AI คือระบบ AI สำหรับสแกนฉลากโภชนาการอาหารจากภาพ เพื่อช่วยให้ผู้ใช้เข้าใจข้อมูลโภชนาการได้ง่ายและรวดเร็วมากขึ้น โดยระบบจะใช้ OCR และ AI ในการอ่าน วิเคราะห์ และสรุปข้อมูลสุขภาพอาหารอัตโนมัติ
