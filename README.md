@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://ai-nutri-scan.netlify.app/">
-    <img src="https://img.shields.io/badge/NutriScan%20AI-Live%20Demo-green?style=for-the-badge" />
+    <img src="https://annaworasing586.github.io/TEAM-11-Sprint3/" />
   </a>
 </p>
 
