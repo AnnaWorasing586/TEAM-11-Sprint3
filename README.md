@@ -119,16 +119,22 @@ cd TEAM-11-Sprint3
 ---
 
 ### 2. Backend Setup
-
+#### แบบ Windows
 cd backend
 
 python -m venv venv
 
-# activate virtual environment
-# Windows:
 venv\Scripts\activate
 
-# Mac/Linux:
+pip install -r requirements.txt
+
+uvicorn app.main:app --reload --port 8080
+
+#### แบบ Mac/Linux
+cd backend
+
+python -m venv venv
+
 source venv/bin/activate
 
 pip install -r requirements.txt
