@@ -1,12 +1,10 @@
-# Priority Fix List
+## Priority Fix List
 
 > Sprint 4 — NutriScan AI (Team 11)
 
 เอกสารนี้สรุปรายการปรับปรุงที่ได้จาก User Testing และ Insight ที่ค้นพบใน Sprint 4 โดยจัดลำดับความสำคัญเพื่อใช้วางแผนการพัฒนา Prototype v2 และ Sprint 5
 
-ดูรายละเอียดของ Feedback ได้ที่ `feedback-summary.md`
-
-ดูการวิเคราะห์เชิงลึกได้ที่ `insights.md`
+ดูรายละเอียดของ Feedback ได้ที่ [Feedback Summary](feedback-summary.md) ดูการวิเคราะห์เชิงลึกได้ที่ [insights](insights.md)
 
 ---
 
