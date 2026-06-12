@@ -4,7 +4,7 @@
 >
 > NutriScan AI (Team 11)
 
-เอกสารนี้สรุปแผนการพัฒนา Prototype v2 โดยอ้างอิงจากผลการทดสอบผู้ใช้ (User Testing) ใน Sprint 4 รวมถึง Insight และ Priority Fix List ที่ทีมได้วิเคราะห์ไว้
+เอกสารนี้สรุปแผนการพัฒนา Prototype v2 โดยอ้างอิงจากผลการทดสอบผู้ใช้ (User Testing) ใน Sprint 4 รวมถึง [insights](insights.md) และ [Priority Fix List](priority-fix-list.md) ที่ทีมได้วิเคราะห์ไว้
 
 ---
 
