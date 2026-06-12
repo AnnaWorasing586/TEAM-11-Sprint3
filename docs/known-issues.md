@@ -1,4 +1,4 @@
-# Known Issues & Limitations
+## Known Issues & Limitations
 
 > Sprint 3 — NutriScan AI (CP5 Submission)
 >
@@ -7,15 +7,15 @@
 
 ---
 
-## Overview
+### Overview
 
 เอกสารนี้สรุปข้อจำกัด (Limitations) และประเด็นที่ยังต้องปรับปรุงของ NutriScan AI Prototype v1 ที่พบระหว่างการพัฒนาใน Sprint 3 เพื่อใช้เป็นข้อมูลสำหรับการวางแผนทดสอบและพัฒนาต่อใน Sprint ถัดไป
 
 ---
 
-## Prototype Limitations
+### Prototype Limitations
 
-### 1. Web Browser Only
+#### 1. Web Browser Only
 
 ปัจจุบัน Prototype v1 รองรับการใช้งานผ่าน Web Browser เท่านั้น
 
@@ -23,7 +23,7 @@
 
 ---
 
-### 2. OCR Accuracy
+#### 2. OCR Accuracy
 
 ระบบ OCR อาจอ่านข้อมูลโภชนาการผิดพลาดในบางกรณี เช่น
 
@@ -35,7 +35,7 @@
 
 ---
 
-### 3. Nutrition Analysis Logic
+#### 3. Nutrition Analysis Logic
 
 การวิเคราะห์ข้อมูลโภชนาการใน Prototype v1 ยังใช้ Rule-based Logic และเกณฑ์ที่กำหนดไว้ล่วงหน้า
 
@@ -43,7 +43,7 @@
 
 ---
 
-### 4. Limited Dataset
+#### 4. Limited Dataset
 
 ระบบยังได้รับการทดสอบกับตัวอย่างฉลากอาหารจำนวนจำกัด
 
@@ -51,7 +51,7 @@
 
 ---
 
-### 5. User Testing Not Yet Conducted
+#### 5. User Testing Not Yet Conducted
 
 ณ สิ้นสุด Sprint 3 ระบบยังไม่ได้ผ่านการทดสอบกับผู้ใช้จริง
 
@@ -66,7 +66,7 @@
 
 ---
 
-## Current Workarounds
+### Current Workarounds
 
 ในระหว่างการใช้งาน Prototype v1 สามารถลดผลกระทบจากข้อจำกัดข้างต้นได้โดย
 
@@ -78,7 +78,7 @@
 
 ---
 
-## Planned Actions for Sprint 4
+### Planned Actions for Sprint 4
 
 ทีมมีแผนดำเนินการดังต่อไปนี้ใน Sprint 4
 
@@ -90,6 +90,7 @@
 
 ---
 
-## Conclusion
+### Conclusion
 
+NutriScan AI Prototype v1 สามารถทำงานตาม Core Flow หลักได้สำเร็จในระดับ Prototype ได้แก่ การอัปโหลดรูปภาพ การอ่านข้อมูลด้วย OCR และการแสดงผลการวิเคราะห์โภชนาการ อย่างไรก็ตาม ยังมีข้อจำกัดหลายด้านที่ต้องได้รับการตรวจสอบและปรับปรุงเพิ่มเติมผ่านการทดสอบกับผู้ใช้จริงใน Sprint 4
 NutriScan AI Prototype v1 สามารถทำงานตาม Core Flow หลักได้สำเร็จในระดับ Prototype ได้แก่ การอัปโหลดรูปภาพ การอ่านข้อมูลด้วย OCR และการแสดงผลการวิเคราะห์โภชนาการ อย่างไรก็ตาม ยังมีข้อจำกัดหลายด้านที่ต้องได้รับการตรวจสอบและปรับปรุงเพิ่มเติมผ่านการทดสอบกับผู้ใช้จริงใน Sprint 4
