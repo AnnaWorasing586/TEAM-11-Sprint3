@@ -1,8 +1,8 @@
-# 📌 Sprint 4 Evidence Log — NutriScan AI
+## 📌 Sprint 4 Evidence Log — NutriScan AI
 
 ---
 
-## 🗓️ User Testing Session
+### 🗓️ User Testing Session
 
 | รายการ           | รายละเอียด                                                     |
 | ---------------- | -------------------------------------------------------------- |
@@ -16,7 +16,7 @@
 
 ---
 
-## 🎯 Testing Objectives
+### 🎯 Testing Objectives
 
 1. ประเมินความสามารถในการใช้งานของระบบ
 2. ทดสอบความถูกต้องของ OCR ในการอ่านฉลากโภชนาการ
@@ -25,9 +25,9 @@
 
 ---
 
-## 📋 Tasks Performed
+### 📋 Tasks Performed
 
-### T1 — Upload Nutrition Label
+#### T1 — Upload Nutrition Label
 
 ผู้ใช้อัปโหลดรูปภาพฉลากโภชนาการเข้าสู่ระบบ
 
@@ -35,7 +35,7 @@
 
 ---
 
-### T2 — Review OCR Result
+#### T2 — Review OCR Result
 
 ผู้ใช้ตรวจสอบข้อมูลที่ระบบ OCR อ่านได้
 
@@ -45,7 +45,7 @@
 
 ---
 
-### T3 — View Nutrition Analysis
+#### T3 — View Nutrition Analysis
 
 ผู้ใช้ดูผลการวิเคราะห์โภชนาการที่ระบบแสดง
 
@@ -53,7 +53,7 @@
 
 ---
 
-## 📸 Evidence Collected
+### 📸 Evidence Collected
 
 * Screenshot การอัปโหลดรูปภาพ
 * Screenshot ผลลัพธ์ OCR
@@ -64,15 +64,15 @@
 
 ---
 
-## 🔍 Key Observations
+### 🔍 Key Observations
 
-### Positive Findings
+#### Positive Findings
 
 * ผู้ใช้สามารถใช้งานระบบได้ครบทุกขั้นตอน
 * ขั้นตอนการใช้งานเข้าใจง่าย
 * ผู้ใช้เข้าใจวัตถุประสงค์ของระบบได้อย่างรวดเร็ว
 
-### Issues Found
+#### Issues Found
 
 * OCR มีความคลาดเคลื่อนเมื่อรูปภาพไม่ชัดเจน
 * ผู้ใช้บางรายต้องการคำอธิบายผลวิเคราะห์เพิ่มเติม
@@ -80,7 +80,7 @@
 
 ---
 
-## 📦 Sprint 4 Outputs
+### 📦 Sprint 4 Outputs
 
 * User Testing สำเร็จจำนวน 5 คน
 * Feedback Summary จัดทำเสร็จสมบูรณ์
@@ -90,7 +90,7 @@
 
 ---
 
-## 🔗 Related Documents
+### 🔗 Related Documents
 
 * docs/test-plan-sprint4.md
 * docs/user-task-script.md
