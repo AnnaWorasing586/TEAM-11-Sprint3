@@ -2,7 +2,7 @@
 
 > Sprint 4 — NutriScan AI (Team 11)
 
-เอกสารนี้สรุป Insight สำคัญที่ได้จาก User Testing ใน Sprint 4 โดยอ้างอิงจาก Feedback Summary และผลการทดสอบผู้ใช้ เพื่อนำไปใช้ในการวางแผน Prototype v2 และ Sprint 5
+เอกสารนี้สรุป Insight สำคัญที่ได้จาก User Testing ใน Sprint 4 โดยอ้างอิงจาก [Feedback Summary](feedback-summary.md) และผลการทดสอบผู้ใช้ เพื่อนำไปใช้ในการวางแผน Prototype v2 และ Sprint 5
 
 แต่ละ Insight ประกอบด้วย
 
