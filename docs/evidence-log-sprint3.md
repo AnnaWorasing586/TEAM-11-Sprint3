@@ -1,8 +1,8 @@
-# 📌 Sprint 3 Evidence — NutriScan AI (CP5 Submission)
+## 📌 Sprint 3 Evidence — NutriScan AI (CP5 Submission)
 
 ---
 
-## 🗓️ Day 1 — Project Setup & Planning (26 May 2026)
+### 🗓️ Day 1 — Project Setup & Planning (26 May 2026)
 
 | ผู้รับผิดชอบ | บทบาท | สิ่งที่ทำ | หลักฐาน |
 |--------------|--------|-----------|----------|
@@ -11,7 +11,7 @@
 | Wichayada Thinkaew | Backend Support & UX/UI Designer | ออกแบบ User Flow, Wireframe และ UI Prototype | Figma Design |
 | Anna Worrasing | Backend Developer | เตรียม FastAPI Backend และทดลอง OCR อ่านฉลากโภชนาการ | GitHub Commit, OCR Test Screenshot |
 
-### 📦 Output
+#### 📦 Output
 - Sprint Goal และ Sprint Scope ถูกกำหนดชัดเจน  
 - แบ่ง Role ทีมครบถ้วน  
 - UI/UX Prototype เสร็จสมบูรณ์  
@@ -20,7 +20,7 @@
 
 ---
 
-## 🗓️ Day 2 — First Working Component (27 May 2026)
+### 🗓️ Day 2 — First Working Component (27 May 2026)
 
 | ผู้รับผิดชอบ | บทบาท | สิ่งที่ทำ | หลักฐาน |
 |--------------|--------|-----------|----------|
@@ -29,7 +29,7 @@
 | Wichayada Thinkaew | Backend Support & UX/UI Designer | ปรับ UI Design และช่วยเชื่อม Frontend–Backend | Figma Update |
 | Anna Worrasing | Backend Developer | พัฒนา API และ OCR integration | API Response, OCR Output Screenshot |
 
-### 📦 Output
+#### 📦 Output
 - First Working Component สำเร็จ  
 - Frontend Upload image ใช้งานได้  
 - Backend รับภาพและประมวลผลได้  
@@ -38,7 +38,7 @@
 
 ---
 
-## 🗓️ Day 3 — Integration & Risk Control (28 May 2026)
+### 🗓️ Day 3 — Integration & Risk Control (28 May 2026)
 
 | ผู้รับผิดชอบ | บทบาท | สิ่งที่ทำ | หลักฐาน |
 |--------------|--------|-----------|----------|
@@ -47,7 +47,7 @@
 | Wichayada Thinkaew | Backend Support & UX/UI Designer | ปรับ UX/UI และตรวจสอบ User Flow | Figma Prototype |
 | Anna Worrasing | Backend Developer | เชื่อม OCR + Firebase + Backend Logic | API Test, Firebase Screenshot |
 
-### 📦 Output
+#### 📦 Output
 - Frontend และ Backend เชื่อมต่อกันสมบูรณ์  
 - ระบบแสดงผลโภชนาการได้จริง  
 - Firebase ใช้สำหรับเก็บข้อมูล  
@@ -56,7 +56,7 @@
 
 ---
 
-## 🗓️ Day 4 — Demo Evidence & CP5 Submission (30 May 2026)
+### 🗓️ Day 4 — Demo Evidence & CP5 Submission (30 May 2026)
 
 | ผู้รับผิดชอบ | บทบาท | สิ่งที่ทำ | หลักฐาน |
 |--------------|--------|-----------|----------|
@@ -65,7 +65,7 @@
 | Wichayada Thinkaew | Backend Support & UX/UI Designer | ตรวจ UX consistency และทำ Demo Script | demo-script.md |
 | Anna Worrasing | Backend Developer | ทดสอบ OCR, API, Firebase และสรุป issues | Integration Test |
 
-### 📦 Output
+#### 📦 Output
 - Prototype v1 พร้อม Demo ใช้งานได้จริง  
 - Core Flow: Upload → OCR → Analysis → Result Display  
 - Sprint documentation ครบถ้วน  
@@ -74,16 +74,16 @@
 
 ---
 
-## 📉 Scope Adjustment During Sprint 3
+### 📉 Scope Adjustment During Sprint 3
 
-### 🔴 Original Scope
+#### 🔴 Original Scope
 - Mobile Application  
 - OCR-based Nutrition Scanning  
 - AI Nutrition Analysis  
 - Firebase Integration  
 - Traffic Light Nutrition Indicator  
 
-### 🟢 Adjusted Scope
+#### 🟢 Adjusted Scope
 - Web-based Prototype (แทน Mobile App)  
 - OCR Integration  
 - Backend API Development  
@@ -91,17 +91,17 @@
 - Nutrition Analysis Workflow  
 - Result Dashboard (Traffic Light Indicator)  
 
-### 🎯 Reason for Adjustment
+#### 🎯 Reason for Adjustment
 เพื่อให้ทีมสามารถส่งมอบ Core Flow ที่เสถียรและครบถ้วนภายใน Sprint 3 และพร้อมสำหรับการทดสอบใน Sprint ถัดไป  
 
-### 📌 Impact
+#### 📌 Impact
 - Prototype ใช้งานผ่าน Web เท่านั้น  
 - Mobile App จะพัฒนาใน Sprint ถัดไป  
 - Core system ทำงานแบบ End-to-End สำเร็จ  
 
 ---
 
-## 🔗 Evidence Links
+### 🔗 Evidence Links
 
 - GitHub Repository: https://github.com/AnnaWorasing586/TEAM-11-Sprint3  
 - Demo Video: `assets/demo-videos-links.md` 
@@ -113,7 +113,7 @@
 
 ---
 
-## 📸 Evidence Types
+### 📸 Evidence Types
 
 - GitHub Commit  
 - UI Screenshot  
@@ -124,4 +124,4 @@
 - Sprint Board  
 - Integration Test  
 - Documentation  
-- Demo Video  
+- Demo Video
