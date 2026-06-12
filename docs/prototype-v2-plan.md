@@ -1,4 +1,4 @@
-# Prototype v2 Plan
+## Prototype v2 Plan
 
 > Sprint 5 Planning
 >
@@ -8,7 +8,7 @@
 
 ---
 
-## Current Version (Prototype v1)
+### Current Version (Prototype v1)
 
 ฟังก์ชันที่มีอยู่ในปัจจุบัน
 
@@ -19,6 +19,7 @@
 
 Core Flow:
 
+```text
 Upload Image
 
 ↓
@@ -32,18 +33,19 @@ Nutrition Analysis
 ↓
 
 Result Display
+```
 
 ---
 
-## Prototype v2 Goals
+### Prototype v2 Goals
 
 ทีมต้องการปรับปรุงความถูกต้องของข้อมูลและประสบการณ์การใช้งาน โดยยังคง Core Flow เดิมไว้
 
 ---
 
-## Planned Improvements
+### Planned Improvements
 
-### 1. Improve OCR Accuracy
+#### 1. Improve OCR Accuracy
 
 - ปรับปรุงการอ่านข้อมูลจากฉลากอาหาร
 - ลดข้อผิดพลาดในการอ่านตัวเลขและข้อความ
@@ -51,7 +53,7 @@ Result Display
 
 ---
 
-### 2. Add Image Upload Guidance
+#### 2. Add Image Upload Guidance
 
 - เพิ่มคำแนะนำก่อนอัปโหลดรูปภาพ
 - แนะนำวิธีถ่ายภาพให้เห็นฉลากชัดเจน
@@ -59,7 +61,7 @@ Result Display
 
 ---
 
-### 3. Improve Nutrition Analysis Explanation
+#### 3. Improve Nutrition Analysis Explanation
 
 - เพิ่มคำอธิบายผลการวิเคราะห์
 - เพิ่มข้อความที่เข้าใจง่ายสำหรับผู้ใช้ทั่วไป
@@ -67,7 +69,7 @@ Result Display
 
 ---
 
-### 4. Improve User Interface
+#### 4. Improve User Interface
 
 - ปรับปรุงการจัดวางข้อมูล
 - เพิ่มความชัดเจนของผลลัพธ์
@@ -75,7 +77,7 @@ Result Display
 
 ---
 
-## Expected Outcome
+### Expected Outcome
 
 Prototype v2 ควรสามารถ
 
@@ -86,6 +88,6 @@ Prototype v2 ควรสามารถ
 
 ---
 
-## Scope for Sprint 5
+### Scope for Sprint 5
 
 ทีมจะมุ่งเน้นการปรับปรุงคุณภาพของระบบเดิม มากกว่าการเพิ่มฟีเจอร์ใหม่ เพื่อให้ NutriScan AI มีความเสถียรและพร้อมสำหรับการทดสอบเพิ่มเติมในอนาคต
