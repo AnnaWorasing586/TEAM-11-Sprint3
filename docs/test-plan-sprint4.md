@@ -7,7 +7,7 @@
 Prototype Link:
 https://annaworasing586.github.io/TEAM-11-Sprint3/
 
-#### Core Flow
+### Core Flow
 
 อัปโหลดรูปฉลากอาหาร → OCR อ่านข้อมูลโภชนาการ → วิเคราะห์ข้อมูลโภชนาการ → แสดงผลลัพธ์
 
