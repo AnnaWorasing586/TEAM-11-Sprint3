@@ -1,4 +1,4 @@
-# Sprint 4 Review & Retrospective
+## Sprint 4 Review & Retrospective
 
 > NutriScan AI (Team 11)
 
@@ -6,15 +6,15 @@
 
 ---
 
-# Sprint Review
+## Sprint Review
 
-## Sprint Goal
+### Sprint Goal
 
 ทดสอบ Prototype v1 กับผู้ใช้จริง เพื่อประเมินความสามารถในการใช้งาน ความเข้าใจของผู้ใช้ และรวบรวม Feedback สำหรับการพัฒนาใน Sprint ถัดไป
 
 ---
 
-## What Was Completed
+### What Was Completed
 
 - จัดทำ User Test Plan
 - ดำเนินการ User Testing
@@ -26,7 +26,7 @@
 
 ---
 
-## Key Findings
+### Key Findings
 
 - ผู้ใช้สามารถเข้าใจ Core Flow ได้ง่าย
 - OCR ยังมีข้อจำกัดเมื่อรูปภาพไม่ชัดเจน
@@ -35,9 +35,9 @@
 
 ---
 
-# Sprint Retrospective
+## Sprint Retrospective
 
-## What Went Well
+### What Went Well
 
 - ทีมสามารถพัฒนา Prototype v1 ได้สำเร็จ
 - User Testing ดำเนินการตามแผนที่กำหนดไว้
@@ -46,7 +46,7 @@
 
 ---
 
-## What Could Be Improved
+### What Could Be Improved
 
 - ความแม่นยำของ OCR ยังต้องปรับปรุง
 - การอธิบายผลลัพธ์ยังไม่ชัดเจนเพียงพอ
@@ -54,7 +54,7 @@
 
 ---
 
-## Action Items for Sprint 5
+### Action Items for Sprint 5
 
 - ปรับปรุง OCR Accuracy
 - เพิ่มคำแนะนำการอัปโหลดรูปภาพ
@@ -63,6 +63,6 @@
 
 ---
 
-## Conclusion
+### Conclusion
 
 Sprint 4 ช่วยให้ทีมเข้าใจปัญหาและความต้องการของผู้ใช้ได้ชัดเจนมากขึ้น โดยผลการทดสอบยืนยันว่า NutriScan AI มีศักยภาพในการช่วยให้ผู้ใช้เข้าใจข้อมูลโภชนาการจากฉลากอาหารได้ง่ายขึ้น ทีมจะนำ Feedback และ Insight ที่ได้รับไปใช้ในการพัฒนา Prototype v2 และ Sprint 5 ต่อไป
