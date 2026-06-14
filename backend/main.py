@@ -30,8 +30,8 @@ def extract_nutrition_values(text_list):
     sugar_val = 0.0
     sodium_val = 0
 
+    # รวมข้อความทั้งหมดเป็นก้อนเดียว ลบช่องว่างออกเพื่อป้องกันคำแตกบรรทัด
     full_text = " ".join(text_list).lower()
-    # ทำความสะอาดข้อความรวมแบบสมานคำและตัวเลข
     full_text_clean = full_text.replace(" ", "")
     
     print("\n========== OCR RESULT ==========")
@@ -39,77 +39,58 @@ def extract_nutrition_values(text_list):
         print(t)
     print("================================\n")
 
-    def get_number(text):
-        match = re.search(r'(\d+(?:\.\d+)?)', text)
-        if match:
-            return float(match.group(1))
-        return None
-
     # --------------------------------------------------
     # 🎯 1. ดักจับ พลังงาน (Calories)
     # --------------------------------------------------
     cal_match = re.search(r'(?:พลังงานทั้งหมด|พลังงาน|energy)\s*(\d+)', full_text)
     if cal_match:
         calories_val = int(cal_match.group(1))
+    else:
+        # วิธีสำรอง ดึงตัวเลขที่อยู่ใกล้คำว่ากิโลแคลอรี
+        cal_backup = re.search(r'(\d+)\s*(?:กิโลแคลอรี|kcal)', full_text)
+        if cal_backup:
+            calories_val = int(cal_backup.group(1))
 
     # --------------------------------------------------
-    # 🎯 2. เจาะจงหา โปรตีน (Protein) จากข้อความรวมเพื่อแก้ปัญหาคำติดกัน
+    # 🎯 2. เจาะจงหา โปรตีน (Protein) - ดึงเลขหลังคีย์เวิร์ดโดยตรงเพื่อหลบสระอึเพี้ยน
     # --------------------------------------------------
-    # สั่งค้นหาตัวเลขที่อยู่ใกล้ ๆ คำว่า โปรตีน/โปรตึน/protein ทันที
-    protein_match = re.search(r'(?:โปรตีน|โปรติน|โปรตึน|โปรติ|เปรตีน|protein)\s*(\d+(?:\.\d+)?)', full_text_clean)
+    protein_match = re.search(r'(?:โปรตีน|โปรติน|โปรตึน|โปรติ|เปรตีน|protein)[^\d]*(\d+(?:\.\d+)?)', full_text_clean)
     if protein_match:
         protein_val = float(protein_match.group(1))
 
-    for text in text_list:
-        text_clean = text.lower().replace(" ", "")
+    # --------------------------------------------------
+    # 🎯 3. เจาะจงหา คาร์โบไฮเดรต (Carbs)
+    # --------------------------------------------------
+    carbs_match = re.search(r'(?:คาร์โบไฮเดรต|คาร์โบไฮเดรท|คาร์โบ|carbohydrate|carb)[^\d]*(\d+(?:\.\d+)?)', full_text_clean)
+    if carbs_match:
+        carbs_val = float(carbs_match.group(1))
 
-        if calories_val == 0:
-            if any(keyword in text_clean for keyword in ["พลังงาน", "energy", "กิโลแคลอรี", "kcal"]):
-                value = get_number(text_clean)
-                if value is not None and value < 3000:
-                    calories_val = int(value)
+    # --------------------------------------------------
+    # 🎯 4. เจาะจงหา ไขมันทั้งหมด (Fat) - หลบพลังงานจากไขมัน
+    # --------------------------------------------------
+    # ลบคำว่า พลังงานจากไขมัน ออกไปจากข้อความตรวจไขมันก่อนเพื่อป้องกัน AI สับสน
+    text_for_fat = full_text_clean.replace("พลังงานจากไขมัน", "")
+    fat_match = re.search(r'(?:ไขมันทั้งหมด|ไขมัน|totalfat)[^\d]*(\d+(?:\.\d+)?)', text_for_fat)
+    if fat_match:
+        fat_val = float(fat_match.group(1))
 
-        # -------------------------
-        # 🎯 3. คาร์โบไฮเดรต (Carbs)
-        # -------------------------
-        if any(keyword in text_clean for keyword in ["คาร์โบไฮเดรต", "คาร์โบไฮเดรท", "คาร์โบ", "carbohydrate", "carb"]):
-            value = get_number(text_clean)
-            if value is not None:
-                carbs_val = value
+    # --------------------------------------------------
+    # 🎯 5. เจาะจงหา น้ำตาล (Sugar)
+    # --------------------------------------------------
+    sugar_match = re.search(r'(?:น้ำตาล|น้าตาล|นำตาล|sugar)[^\d]*(\d+(?:\.\d+)?)', full_text_clean)
+    if sugar_match:
+        sugar_val = float(sugar_match.group(1))
 
-        # -------------------------
-        # 🎯 4. ไขมันทั้งหมด (Fat)
-        # -------------------------
-        if any(keyword in text_clean for keyword in ["ไขมันทั้งหมด", "ไขมัน", "totalfat"]) and "พลังงานจากไขมัน" not in text:
-            value = get_number(text_clean)
-            if value is not None:
-                fat_val = value
-
-        # -------------------------
-        # 🎯 5. น้ำตาล (Sugar)
-        # -------------------------
-        if any(keyword in text_clean for keyword in ["น้ำตาล", "น้าตาล", "นำตาล", "sugar"]):
-            value = get_number(text_clean)
-            if value is not None and value <= 100:
-                sugar_val = value
-
-        # -------------------------
-        # 🎯 6. โซเดียม (Sodium)
-        # -------------------------
-        if any(keyword in text_clean for keyword in ["โซเดียม", "เซเดียม", "โซเดย", "เดียม", "sodium"]):
-            text_fixed = text_clean.replace("o", "0").replace("O", "0")
-            value = get_number(text_fixed)
-            if value is not None:
-                sodium_val = int(value)
-
-    # Fallback โซเดียมเผื่อดึงจากก้อนรวมตัวเลขติดกัน
-    if sodium_val == 0:
-        sod_match = re.search(r'(?:โซเดียม|sodium)\s*(\d+)', full_text_clean.replace("o", "0").replace("O", "0"))
-        if sod_match:
-            sodium_val = int(sod_match.group(1))
+    # --------------------------------------------------
+    # 🎯 6. เจาะจงหา โซเดียม (Sodium) - แก้เคสอ่านเลข 0 เป็น ตัว o หรือ O
+    # --------------------------------------------------
+    sodium_text_fixed = full_text_clean.replace("o", "0").replace("O", "0")
+    sodium_match = re.search(r'(?:โซเดียม|เซเดียม|โซเดย|เดียม|sodium)[^\d]*(\d+)', sodium_text_fixed)
+    if sodium_match:
+        sodium_val = int(sodium_match.group(1))
 
     # ==================================
-    # ลอจิกคำแนะนำ
+    # 🧠 ลอจิกการให้คำแนะนำสไตล์คุณน้า
     # ==================================
     if sugar_val > 15 or sodium_val > 400:
         color = "red"
