@@ -31,6 +31,7 @@ def extract_nutrition_values(text_list):
     sodium_val = 0
 
     full_text = " ".join(text_list).lower()
+    full_text_clean = full_text.replace(" ", "")
 
     print("\n========== OCR RESULT ==========")
     for t in text_list:
@@ -43,32 +44,27 @@ def extract_nutrition_values(text_list):
             return float(match.group(1))
         return None
 
-    for text in text_list:
+    # --------------------------------------------------
+    # 🎯 เจาะจงหา พลังงาน (Calories) ด้วย Regex จากข้อความรวมเพื่อความแม่นยำ
+    # --------------------------------------------------
+    cal_match = re.search(r'(?:พลังงานทั้งหมด|พลังงาน|energy)\s*(\d+)', full_text)
+    if cal_match:
+        calories_val = int(cal_match.group(1))
 
+    for text in text_list:
         text_clean = text.lower().replace(" ", "")
 
-        # -------------------------
-        # Calories
-        # -------------------------
-        if any(keyword in text_clean for keyword in [
-            "พลังงาน",
-            "energy",
-            "กิโลแคลอรี",
-            "kilocalories",
-            "kcal"
-        ]):
-            value = get_number(text)
-            if value is not None and value < 3000:
-                calories_val = int(value)
+        # ถ้าด้านบนยังหาพลังงานไม่เจอ ค่อยใช้แบบเดิมช่วยหา
+        if calories_val == 0:
+            if any(keyword in text_clean for keyword in ["พลังงาน", "energy", "กิโลแคลอรี", "kilocalories", "kcal"]):
+                value = get_number(text)
+                if value is not None and value < 3000:
+                    calories_val = int(value)
 
         # -------------------------
-        # Protein
+        # Protein (เพิ่มคำดักฟอนต์ภาษาไทยเพี้ยน)
         # -------------------------
-        if any(keyword in text_clean for keyword in [
-            "โปรตีน",
-            "โปรติน",
-            "protein"
-        ]):
+        if any(keyword in text_clean for keyword in ["โปรตีน", "โปรติน", "โปรติ", "เปรตีน", "โปรดึน", "protein"]):
             value = get_number(text)
             if value is not None:
                 protein_val = value
@@ -76,12 +72,7 @@ def extract_nutrition_values(text_list):
         # -------------------------
         # Carbs
         # -------------------------
-        if any(keyword in text_clean for keyword in [
-            "คาร์โบไฮเดรต",
-            "คาร์โบไฮเดรท",
-            "carbohydrate",
-            "carb"
-        ]):
+        if any(keyword in text_clean for keyword in ["คาร์โบไฮเดรต", "คาร์โบไฮเดรท", "carbohydrate", "carb"]):
             value = get_number(text)
             if value is not None:
                 carbs_val = value
@@ -89,12 +80,7 @@ def extract_nutrition_values(text_list):
         # -------------------------
         # Fat
         # -------------------------
-        if any(keyword in text_clean for keyword in [
-            "ไขมันทั้งหมด",
-            "ไขมัน",
-            "fat",
-            "totalfat"
-        ]):
+        if any(keyword in text_clean for keyword in ["ไขมันทั้งหมด", "ไขมัน", "fat", "totalfat"]):
             value = get_number(text)
             if value is not None:
                 fat_val = value
@@ -102,12 +88,7 @@ def extract_nutrition_values(text_list):
         # -------------------------
         # Sugar
         # -------------------------
-        if any(keyword in text_clean for keyword in [
-            "น้ำตาล",
-            "น้าตาล",
-            "นำตาล",
-            "sugar"
-        ]):
+        if any(keyword in text_clean for keyword in ["น้ำตาล", "น้าตาล", "นำตาล", "sugar"]):
             value = get_number(text)
             if value is not None and value <= 100:
                 sugar_val = value
@@ -115,14 +96,7 @@ def extract_nutrition_values(text_list):
         # -------------------------
         # Sodium
         # -------------------------
-        if any(keyword in text_clean for keyword in [
-            "โซเดียม",
-            "เซเดียม",
-            "โซเดย",
-            "เดียม",
-            "sodium",
-            "sod"
-        ]):
+        if any(keyword in text_clean for keyword in ["โซเดียม", "เซเดียม", "โซเดย", "เดียม", "sodium", "sod"]):
             value = get_number(text)
             if value is not None:
                 sodium_val = int(value)
@@ -130,7 +104,6 @@ def extract_nutrition_values(text_list):
     # ==================================
     # Fallback Logic
     # ==================================
-
     if calories_val == 0:
         match = re.search(r'พลังงาน\s*(\d+)', full_text)
         if match:
@@ -139,13 +112,9 @@ def extract_nutrition_values(text_list):
     # ==================================
     # Nutrition Score (เวอร์ชันวิเคราะห์ตามจริง สไตล์คุณน้า)
     # ==================================
-
-    # 1. เช็กความรุนแรงกลุ่มสีแดง (เกณฑ์สูง) ก่อนเพื่อน
     if sugar_val > 15 or sodium_val > 400:
         color = "red"
         score = 35
-        
-        # วิเคราะห์ตามจริงหน้างาน อันไหนสูงพูดอันนั้น
         if sugar_val > 15 and sodium_val > 400:
             recommendation = "น้ำตาลและโซเดียมอยู่ในเกณฑ์สูงจัด! เป็นกลุ่มอาหารและเครื่องดื่มที่เสี่ยงกระทบต่อสุขภาพระยะยาว ควรหลีกเลี่ยงหรือแบ่งทานทีละน้อยนะคะ"
         elif sugar_val > 15:
@@ -153,12 +122,9 @@ def extract_nutrition_values(text_list):
         else:
             recommendation = "โซเดียมอยู่ในเกณฑ์สูง! ควรหลีกเลี่ยงหรือทานแต่น้อยเพื่อป้องกันภาวะความดันโลหิตสูง และช่วยลดการทำงานหนักของไตค่ะ"
 
-    # 2. เช็กระดับกลุ่มสีเหลือง (เกณฑ์ปานกลาง)
     elif sugar_val > 6 or sodium_val > 150:
         color = "yellow"
         score = 65
-        
-        # วิเคราะห์ตามจริงในระดับปานกลาง
         if sugar_val > 6 and sodium_val > 150:
             recommendation = "สารอาหารอยู่ในระดับปานกลาง ถือเป็นตัวเลือกที่ทานได้ทั่วไปอย่างเหมาะสม แต่อย่าลืมทานอาหารให้ครบ 5 หมู่ในมื้อหลักด้วยนะ"
         elif sugar_val > 6:
@@ -166,7 +132,6 @@ def extract_nutrition_values(text_list):
         else:
             recommendation = "โซเดียมอยู่ในระดับปานกลาง ทานได้ขำ ๆ แต่แนะนำให้ดื่มน้ำเปล่าตามมาก ๆ ระหว่างวันเพื่อช่วยขับโซเดียมส่วนเกินออกค่ะ"
 
-    # 3. กลุ่มสีเขียว ปลอดภัยหายห่วง
     else:
         color = "green"
         score = 95
@@ -189,42 +154,20 @@ def extract_nutrition_values(text_list):
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
     try:
-
         image_bytes = await file.read()
-
-        extracted_results = reader.readtext(
-            image_bytes,
-            detail=0
-        )
-
-        analysis_result = extract_nutrition_values(
-            extracted_results
-        )
-
-        analysis_result["ocr_text"] = " | ".join(
-            extracted_results
-        )
-
+        extracted_results = reader.readtext(image_bytes, detail=0)
+        analysis_result = extract_nutrition_values(extracted_results)
+        analysis_result["ocr_text"] = " | ".join(extracted_results)
         return analysis_result
-
     except Exception as e:
-        return {
-            "error": str(e)
-        }
+        return {"error": str(e)}
 
 
 @app.get("/")
 def root():
-    return {
-        "message": "NutriScan AI API Running"
-    }
+    return {"message": "NutriScan AI API Running"}
 
 
 if __name__ == "__main__":
     import uvicorn
-
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=7860
-    )
+    uvicorn.run(app, host="0.0.0.0", port=7860)
