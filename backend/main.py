@@ -30,15 +30,15 @@ def extract_nutrition_values(text_list):
     sugar_val = 0.0
     sodium_val = 0
 
-    # แปลงข้อความรวมเป็นพิมพ์เล็กเพื่อความง่ายในการเช็ก
     full_text = " ".join(text_list).lower()
+    # ทำความสะอาดข้อความรวมแบบสมานคำและตัวเลข
+    full_text_clean = full_text.replace(" ", "")
     
     print("\n========== OCR RESULT ==========")
     for t in text_list:
         print(t)
     print("================================\n")
 
-    # ฟังก์ชันช่วยแกะตัวเลขแบบยืดหยุ่น
     def get_number(text):
         match = re.search(r'(\d+(?:\.\d+)?)', text)
         if match:
@@ -52,24 +52,22 @@ def extract_nutrition_values(text_list):
     if cal_match:
         calories_val = int(cal_match.group(1))
 
+    # --------------------------------------------------
+    # 🎯 2. เจาะจงหา โปรตีน (Protein) จากข้อความรวมเพื่อแก้ปัญหาคำติดกัน
+    # --------------------------------------------------
+    # สั่งค้นหาตัวเลขที่อยู่ใกล้ ๆ คำว่า โปรตีน/โปรตึน/protein ทันที
+    protein_match = re.search(r'(?:โปรตีน|โปรติน|โปรตึน|โปรติ|เปรตีน|protein)\s*(\d+(?:\.\d+)?)', full_text_clean)
+    if protein_match:
+        protein_val = float(protein_match.group(1))
+
     for text in text_list:
-        # ทำความสะอาดข้อความ ลบช่องว่างออกให้หมดเพื่อป้องกันคำแตก
         text_clean = text.lower().replace(" ", "")
 
-        # ถ้าวิธีแรกหาแคลไม่เจอ ให้ใช้วิธีลูปตรวจบรรทัดช่วย
         if calories_val == 0:
             if any(keyword in text_clean for keyword in ["พลังงาน", "energy", "กิโลแคลอรี", "kcal"]):
                 value = get_number(text_clean)
                 if value is not None and value < 3000:
                     calories_val = int(value)
-
-        # -------------------------
-        # 🎯 2. โปรตีน (Protein) - เพิ่มคำดัก 'โปรตึน' สระอึ
-        # -------------------------
-        if any(keyword in text_clean for keyword in ["โปรตีน", "โปรติน", "โปรตึน", "โปรติ", "เปรตีน", "protein"]):
-            value = get_number(text_clean)
-            if value is not None:
-                protein_val = value
 
         # -------------------------
         # 🎯 3. คาร์โบไฮเดรต (Carbs)
@@ -80,7 +78,7 @@ def extract_nutrition_values(text_list):
                 carbs_val = value
 
         # -------------------------
-        # 🎯 4. ไขมันทั้งหมด (Fat) - ล็อกคีย์เวิร์ดเจาะจงน้ำหนักกรัม
+        # 🎯 4. ไขมันทั้งหมด (Fat)
         # -------------------------
         if any(keyword in text_clean for keyword in ["ไขมันทั้งหมด", "ไขมัน", "totalfat"]) and "พลังงานจากไขมัน" not in text:
             value = get_number(text_clean)
@@ -96,23 +94,22 @@ def extract_nutrition_values(text_list):
                 sugar_val = value
 
         # -------------------------
-        # 🎯 6. โซเดียม (Sodium) - แก้ไขเคส OCR อ่านเลข 0 เป็นตัว O หรือ o
+        # 🎯 6. โซเดียม (Sodium)
         # -------------------------
         if any(keyword in text_clean for keyword in ["โซเดียม", "เซเดียม", "โซเดย", "เดียม", "sodium"]):
-            # เปลี่ยนตัว o หรือ O ที่ติดมากับตัวเลขให้กลายเป็นเลข 0
-            text_fixed = text_clean.replace("o", "0").replace("o", "0")
+            text_fixed = text_clean.replace("o", "0").replace("O", "0")
             value = get_number(text_fixed)
             if value is not None:
                 sodium_val = int(value)
 
-    # Fallback เผื่อกรณีหาไม่เจอจริง ๆ
-    if calories_val == 0:
-        match = re.search(r'พลังงาน\s*(\d+)', full_text)
-        if match:
-            calories_val = int(match.group(1))
+    # Fallback โซเดียมเผื่อดึงจากก้อนรวมตัวเลขติดกัน
+    if sodium_val == 0:
+        sod_match = re.search(r'(?:โซเดียม|sodium)\s*(\d+)', full_text_clean.replace("o", "0").replace("O", "0"))
+        if sod_match:
+            sodium_val = int(sod_match.group(1))
 
     # ==================================
-    # 🧠 ลอจิกการให้คำแนะนำสไตล์คุณน้า
+    # ลอจิกคำแนะนำ
     # ==================================
     if sugar_val > 15 or sodium_val > 400:
         color = "red"
