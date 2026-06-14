@@ -22,7 +22,7 @@ final ImagePicker _picker = ImagePicker();
 
 bool _isLoading = false;
 
-final String _apiUrl = "http://127.0.0.1:8080/upload";
+final String _apiUrl = "https://586anna-nutriscan-ai.hf.space/upload";
 
 Future<void> _pickImage(ImageSource source) async {
 final pickedFile = await _picker.pickImage(
