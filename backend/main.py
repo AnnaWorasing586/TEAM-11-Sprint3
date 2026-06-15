@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import easyocr
 import re
 
-app = FastAPI(title="NutriScan AI 100Percent Honest API")
+app = FastAPI(title="NutriScan AI Perfect Match API")
 
 # CORS
 app.add_middleware(
@@ -18,7 +18,6 @@ app.add_middleware(
 reader = easyocr.Reader(['th', 'en'], model_storage_directory='.')
 
 def extract_nutrition_values(text_list):
-    # ตั้งค่าเริ่มต้นเป็น "ไม่พบข้อมูล" ชัดๆ เผื่อกรณีกล้องสแกนพลาด/หลุดบรรทัด
     calories_val = "ไม่พบข้อมูล"
     protein_val = "ไม่พบข้อมูล"
     carbs_val = "ไม่พบข้อมูล"
@@ -29,7 +28,7 @@ def extract_nutrition_values(text_list):
     full_text = " ".join(text_list).lower()
     full_text_clean = full_text.replace(" ", "")
 
-    # 1. พลังงาน (Calories) - เจาะจงดักเลขที่อยู่หลังคำว่าพลังงานทั้งหมดโดยตรง
+    # 1. พลังงาน (Calories)
     cal_match = re.search(r'(?:พลังงานทั้งหมด|energy)\s*(\d+)', full_text)
     if cal_match:
         calories_val = int(cal_match.group(1))
@@ -38,23 +37,24 @@ def extract_nutrition_values(text_list):
         if cal_backup:
             calories_val = int(cal_backup.group(1))
 
-    # 2. โปรตีน (Protein) - บังคับหาตัวเลขที่อยู่ติดกับคำว่าโปรตีนทันที ไม่ข้ามบรรทัด
-    protein_match = re.search(r'(?:โปรตีน|โปรติน|โปรตึน|โปรติ|เปรตีน|โปรดึน|โปรดีน|protein)\s*(\d+(?:\.\d+)?)', full_text)
+    # 2. โปรตีน (Protein) - หาตัวเลขตัวแรกที่เจอหลังจากคำว่าโปรตีน (ยืดหยุ่นแม้อักษรหน่วยจะเพี้ยน)
+    protein_match = re.search(r'(?:โปรตีน|โปรติน|โปรตึน|โปรติ|เปรตีน|โปรดึน|โปรดีน|protein)[^\d]{0,10}(\d+(?:\.\d+)?)', full_text)
     if protein_match:
         protein_val = float(protein_match.group(1))
 
-    # 3. คาร์โบไฮเดรต (Carbs) - หาตัวเลขที่อยู่ติดกับคำหลักทันที
-    carbs_match = re.search(r'(?:คาร์โบไฮเดรตทั้งหมด|คาร์โบไฮเดรต|คาร์โบไฮเดรท|คาร์โบ|carbohydrate|carb)\s*(\d+(?:\.\d+)?)', full_text)
+    # 3. คาร์โบไฮเดรต (Carbs)
+    carbs_match = re.search(r'(?:คาร์โบไฮเดรตทั้งหมด|คาร์โบไฮเดรต|คาร์โบไฮเดรท|คาร์โบ|carbohydrate|carb)[^\d]{0,10}(\d+(?:\.\d+)?)', full_text)
     if carbs_match:
         carbs_val = float(carbs_match.group(1))
 
-    # 4. ไขมันทั้งหมด (Fat) - ป้องกันการดักจับ "พลังงานจากไขมัน" โดยห้ามมีคำว่าพลังงานหรือจากนำหน้า
-    fat_match = re.search(r'(?<!จาก)(?<!พลังงาน)(?:ไขมันทั้งหมด|ไขมัน|totalfat)\s*(\d+(?:\.\d+)?)', full_text)
+    # 4. ไขมันทั้งหมด (Fat) - ดักไขมันทั้งหมด ลบคำว่าพลังงานจากไขมันออกไปก่อนเพื่อไม่ให้แย่งซีน
+    text_for_fat = full_text.replace("พลังงานจากไขมัน", "").replace("พลังงานจากไขมัน70กิโลแคลอรี", "")
+    fat_match = re.search(r'(?:ไขมันทั้งหมด|ไขมัน|totalfat)[^\d]{0,10}(\d+(?:\.\d+)?)', text_for_fat)
     if fat_match:
         fat_val = float(fat_match.group(1))
 
     # 5. น้ำตาล (Sugar)
-    sugar_match = re.search(r'(?:น้ำตาล|น้าตาล|นำตาล|sugar)\s*(\d+(?:\.\d+)?)', full_text)
+    sugar_match = re.search(r'(?:น้ำตาล|น้าตาล|นำตาล|sugar)[^\d]{0,10}(\d+(?:\.\d+)?)', full_text)
     if sugar_match:
         sugar_val = float(sugar_match.group(1))
 
@@ -65,7 +65,7 @@ def extract_nutrition_values(text_list):
         sodium_val = int(sodium_match.group(1))
 
     # --------------------------------------------------
-    # 🚦 ลอจิกคำแนะนำไฟจราจร (เวอร์ชัน Elite - คำนวณจากค่าที่ถูกต้อง)
+    # 🚦 ลอจิกคำแนะนำไฟจราจร (เวอร์ชัน Elite)
     # --------------------------------------------------
     check_sugar = sugar_val if isinstance(sugar_val, (int, float)) else 0
     check_sodium = sodium_val if isinstance(sodium_val, (int, float)) else 0
