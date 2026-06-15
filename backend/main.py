@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import easyocr
 import re
 
-app = FastAPI(title="NutriScan AI Perfect Match API")
+app = FastAPI(title="NutriScan AI Ultimate Coverage API")
 
 # CORS
 app.add_middleware(
@@ -18,6 +18,7 @@ app.add_middleware(
 reader = easyocr.Reader(['th', 'en'], model_storage_directory='.')
 
 def extract_nutrition_values(text_list):
+    # ตั้งค่าเริ่มต้นเป็น "ไม่พบข้อมูล"
     calories_val = "ไม่พบข้อมูล"
     protein_val = "ไม่พบข้อมูล"
     carbs_val = "ไม่พบข้อมูล"
@@ -25,41 +26,56 @@ def extract_nutrition_values(text_list):
     sugar_val = "ไม่พบข้อมูล"
     sodium_val = "ไม่พบข้อมูล"
 
+    # แปลงเป็นพิมพ์เล็กและรวมข้อความเข้าด้วยกัน
     full_text = " ".join(text_list).lower()
-    full_text_clean = full_text.replace(" ", "")
+    
+    # 🧼 ล้างอักขระขยะที่มักทำลายลอจิก Regex ออกให้เกลี้ยง
+    full_text_clean = full_text.replace("(", "").replace(")", "").replace("[", "").replace("]", "")
+    # ลบช่องว่างทั้งหมดเพื่อดักเคสที่กล้องเผลอเคาะวรรคแปลกๆ
+    full_text_no_space = full_text_clean.replace(" ", "")
 
     # 1. พลังงาน (Calories)
-    cal_match = re.search(r'(?:พลังงานทั้งหมด|energy)\s*(\d+)', full_text)
+    cal_match = re.search(r'(?:พลังงานทั้งหมด|energy|พลังงาน)\s*(\d+)', full_text_clean)
     if cal_match:
         calories_val = int(cal_match.group(1))
     else:
-        cal_backup = re.search(r'(\d+)\s*(?:กิโลแคลอรี|kcal|กิโลแคล)', full_text)
+        cal_backup = re.search(r'(\d+)\s*(?:กิโลแคลอรี|kcal|กิโลแคล)', full_text_clean)
         if cal_backup:
             calories_val = int(cal_backup.group(1))
 
-    # 2. โปรตีน (Protein) - หาตัวเลขตัวแรกที่เจอหลังจากคำว่าโปรตีน (ยืดหยุ่นแม้อักษรหน่วยจะเพี้ยน)
-    protein_match = re.search(r'(?:โปรตีน|โปรติน|โปรตึน|โปรติ|เปรตีน|โปรดึน|โปรดีน|protein)[^\d]{0,10}(\d+(?:\.\d+)?)', full_text)
+    # 2. โปรตีน (Protein) - ทะลวงข้ามทุกอักษรเพี้ยน ดึงเฉพาะตัวเลขที่ตามหลังคำว่าโปรตีน
+    protein_match = re.search(r'(?:โปรตีน|โปรติน|โปรตึน|โปรติ|เปรตีน|โปรดึน|โปรดีน|protein)[^\d]{0,15}(\d+(?:\.\d+)?)', full_text_clean)
     if protein_match:
         protein_val = float(protein_match.group(1))
 
-    # 3. คาร์โบไฮเดรต (Carbs)
-    carbs_match = re.search(r'(?:คาร์โบไฮเดรตทั้งหมด|คาร์โบไฮเดรต|คาร์โบไฮเดรท|คาร์โบ|carbohydrate|carb)[^\d]{0,10}(\d+(?:\.\d+)?)', full_text)
+    # 3. คาร์โบไฮเดรต (Carbs) - ครอบคลุมทุกคำย่อ ยิงตรงหาตัวเลขถัดไปทันที
+    carbs_match = re.search(r'(?:คาร์โบไฮเดรตทั้งหมด|คาร์โบไฮเดรต|คาร์โบไฮเดรท|คาร์โบ|carbohydrate|carb)[^\d]{0,15}(\d+(?:\.\d+)?)', full_text_clean)
     if carbs_match:
         carbs_val = float(carbs_match.group(1))
 
-    # 4. ไขมันทั้งหมด (Fat) - ดักไขมันทั้งหมด ลบคำว่าพลังงานจากไขมันออกไปก่อนเพื่อไม่ให้แย่งซีน
-    text_for_fat = full_text.replace("พลังงานจากไขมัน", "").replace("พลังงานจากไขมัน70กิโลแคลอรี", "")
-    fat_match = re.search(r'(?:ไขมันทั้งหมด|ไขมัน|totalfat)[^\d]{0,10}(\d+(?:\.\d+)?)', text_for_fat)
+    # 4. ไขมันทั้งหมด (Fat) - ตัด "พลังงานจากไขมัน" ทิ้งแบบเด็ดขาด แล้วคว้าเลขไขมันจริง
+    text_for_fat = re.sub(r'พลังงานจากไขมัน\s*\d+\s*(?:กิโลแคลอรี|kcal|กิโลแคล)?', '', full_text_clean)
+    text_for_fat_no_space = re.sub(r'พลังงานจากไขมัน\d+(?:กิโลแคลอรี|kcal|กิโลแคล)?', '', full_text_no_space)
+    
+    fat_match = re.search(r'(?:ไขมันทั้งหมด|ไขมัน|totalfat)[^\d]{0,15}(\d+(?:\.\d+)?)', text_for_fat)
     if fat_match:
         fat_val = float(fat_match.group(1))
+    else:
+        fat_backup = re.search(r'(?:ไขมันทั้งหมด|ไขมัน|totalfat)[^\d]{0,15}(\d+(?:\.\d+)?)', text_for_fat_no_space)
+        if fat_backup:
+            fat_val = float(fat_backup.group(1))
 
     # 5. น้ำตาล (Sugar)
-    sugar_match = re.search(r'(?:น้ำตาล|น้าตาล|นำตาล|sugar)[^\d]{0,10}(\d+(?:\.\d+)?)', full_text)
+    sugar_match = re.search(r'(?:น้ำตาล|น้าตาล|นำตาล|sugar)[^\d]{0,15}(\d+(?:\.\d+)?)', full_text_clean)
     if sugar_match:
         sugar_val = float(sugar_match.group(1))
+    else:
+        sugar_backup = re.search(r'(?:น้ำตาล|น้าตาล|นำตาล|sugar)[^\d]{0,15}(\d+(?:\.\d+)?)', full_text_no_space)
+        if sugar_backup:
+            sugar_val = float(sugar_backup.group(1))
 
-    # 6. โซเดียม (Sodium)
-    sodium_text_fixed = full_text_clean.replace("o", "0").replace("O", "0")
+    # 6. โซเดียม (Sodium) - ดักเคสอ่านเลข 0 เป็นตัว O/o
+    sodium_text_fixed = full_text_no_space.replace("o", "0").replace("O", "0")
     sodium_match = re.search(r'(?:โซเดียม|เซเดียม|โซเดย|เดียม|sodium)[^\d]*(\d+)', sodium_text_fixed)
     if sodium_match:
         sodium_val = int(sodium_match.group(1))
