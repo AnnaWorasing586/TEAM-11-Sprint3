@@ -29,8 +29,8 @@ def extract_nutrition_values(text_list):
     full_text = " ".join(text_list).lower()
     full_text_clean = full_text.replace(" ", "")
 
-    # 1. พลังงาน (Calories)
-    cal_match = re.search(r'(?:พลังงานทั้งหมด|พลังงาน|energy)\s*(\d+)', full_text)
+    # 1. พลังงาน (Calories) - เจาะจงดักเลขที่อยู่หลังคำว่าพลังงานทั้งหมดโดยตรง
+    cal_match = re.search(r'(?:พลังงานทั้งหมด|energy)\s*(\d+)', full_text)
     if cal_match:
         calories_val = int(cal_match.group(1))
     else:
@@ -38,28 +38,23 @@ def extract_nutrition_values(text_list):
         if cal_backup:
             calories_val = int(cal_backup.group(1))
 
-    # 2. โปรตีน (Protein) - ดักอักษรเพี้ยน ด เด็ก / ต เต่า ครบถ้วนตามที่คุณน้าจับสังเกตได้
-    protein_match = re.search(r'(?:โปรตีน|โปรติน|โปรตึน|โปรติ|เปรตีน|โปรดึน|โปรดีน|protein)[^\d]*(\d+(?:\.\d+)?)', full_text_clean)
+    # 2. โปรตีน (Protein) - บังคับหาตัวเลขที่อยู่ติดกับคำว่าโปรตีนทันที ไม่ข้ามบรรทัด
+    protein_match = re.search(r'(?:โปรตีน|โปรติน|โปรตึน|โปรติ|เปรตีน|โปรดึน|โปรดีน|protein)\s*(\d+(?:\.\d+)?)', full_text)
     if protein_match:
         protein_val = float(protein_match.group(1))
-    else:
-        protein_backup = re.search(r'(\d+(?:\.\d+)?)\s*(?:ก\.|กรัม|g)\b', full_text)
-        if protein_backup:
-            protein_val = float(protein_backup.group(1))
 
-    # 3. คาร์โบไฮเดรต (Carbs)
-    carbs_match = re.search(r'(?:คาร์โบไฮเดรต|คาร์โบไฮเดรท|คาร์โบ|carbohydrate|carb)[^\d]*(\d+(?:\.\d+)?)', full_text_clean)
+    # 3. คาร์โบไฮเดรต (Carbs) - หาตัวเลขที่อยู่ติดกับคำหลักทันที
+    carbs_match = re.search(r'(?:คาร์โบไฮเดรตทั้งหมด|คาร์โบไฮเดรต|คาร์โบไฮเดรท|คาร์โบ|carbohydrate|carb)\s*(\d+(?:\.\d+)?)', full_text)
     if carbs_match:
         carbs_val = float(carbs_match.group(1))
 
-    # 4. ไขมันทั้งหมด (Fat)
-    text_for_fat = full_text_clean.replace("พลังงานจากไขมัน", "")
-    fat_match = re.search(r'(?:ไขมันทั้งหมด|ไขมัน|totalfat)[^\d]*(\d+(?:\.\d+)?)', text_for_fat)
+    # 4. ไขมันทั้งหมด (Fat) - ป้องกันการดักจับ "พลังงานจากไขมัน" โดยห้ามมีคำว่าพลังงานหรือจากนำหน้า
+    fat_match = re.search(r'(?<!จาก)(?<!พลังงาน)(?:ไขมันทั้งหมด|ไขมัน|totalfat)\s*(\d+(?:\.\d+)?)', full_text)
     if fat_match:
         fat_val = float(fat_match.group(1))
 
     # 5. น้ำตาล (Sugar)
-    sugar_match = re.search(r'(?:น้ำตาล|น้าตาล|นำตาล|sugar)[^\d]*(\d+(?:\.\d+)?)', full_text_clean)
+    sugar_match = re.search(r'(?:น้ำตาล|น้าตาล|นำตาล|sugar)\s*(\d+(?:\.\d+)?)', full_text)
     if sugar_match:
         sugar_val = float(sugar_match.group(1))
 
@@ -70,7 +65,7 @@ def extract_nutrition_values(text_list):
         sodium_val = int(sodium_match.group(1))
 
     # --------------------------------------------------
-    # 🚦 ลอจิกคำแนะนำไฟจราจร (เวอร์ชัน Elite - จัดระเบียบ Tab เรียบร้อยแล้ว)
+    # 🚦 ลอจิกคำแนะนำไฟจราจร (เวอร์ชัน Elite - คำนวณจากค่าที่ถูกต้อง)
     # --------------------------------------------------
     check_sugar = sugar_val if isinstance(sugar_val, (int, float)) else 0
     check_sodium = sodium_val if isinstance(sodium_val, (int, float)) else 0
