@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://annaworasing586.github.io/TEAM-11-Sprint3/">
+  <a href="https://586anna-nutriscan-ai.hf.space/upload">
     <img src="https://img.shields.io/badge/NutriScan%20AI-Live%20Demo-green?style=for-the-badge" />
   </a>
 </p>
