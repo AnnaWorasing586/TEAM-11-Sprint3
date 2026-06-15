@@ -69,22 +69,24 @@ def extract_nutrition_values(text_list):
     if sodium_match:
         sodium_val = int(sodium_match.group(1))
 
-    # คำนวณไฟจราจรชั่วคราว (แปลงค่าเฉพาะตอนเช็คเกณฑ์ ไม่ให้ระบบค้างจากข้อความภาษาไทย)
+    # --------------------------------------------------
+    # 🚦 ลอจิกคำแนะนำไฟจราจร (เวอร์ชัน Elite - จัดระเบียบ Tab เรียบร้อยแล้ว)
+    # --------------------------------------------------
     check_sugar = sugar_val if isinstance(sugar_val, (int, float)) else 0
     check_sodium = sodium_val if isinstance(sodium_val, (int, float)) else 0
 
     if check_sugar > 15 or check_sodium > 400:
         color = "red"
         score = 35
-        recommendation = "น้ำตาลหรือโซเดียมสูงเกินเกณฑ์ ควรระวังนะคะ"
+        recommendation = "ปริมาณน้ำตาลหรือโซเดียมเกินเกณฑ์มาตรฐาน ควรหลีกเลี่ยงหรือแบ่งทาน เพื่อป้องกันภาวะระดับน้ำตาลในเลือดสูงและโซเดียมสะสม"
     elif check_sugar > 6 or check_sodium > 150:
         color = "yellow"
         score = 65
-        recommendation = "สารอาหารปานกลาง ทานได้เหมาะสมค่ะ"
+        recommendation = "คุณค่าทางโภชนาการระดับปานกลาง บริโภคได้แต่ควรจำกัดไม่เกิน 1-2 ส่วนต่อวัน และลดสัดส่วนหวาน-เค็มในมื้อหลัก"
     else:
         color = "green"
         score = 95
-        recommendation = "เยี่ยมมาก! สารอาหารปลอดภัย ดีต่อสุขภาพค่ะ"
+        recommendation = "คุณค่าทางโภชนาการผ่านเกณฑ์มาตรฐาน พลังงานและสารอาหารเหมาะสม สามารถบริโภคได้เป็นประจำภายใต้พลังงานรวมที่ร่างกายต้องการ"
 
     return {
         "color": color, "score": score, "recommendation": recommendation,
