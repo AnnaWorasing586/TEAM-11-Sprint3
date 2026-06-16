@@ -375,8 +375,8 @@
   // ---------- SCAN ----------
   function renderScan(v) {
     const modesHtml = v.modes.map((m) => `
-      <button class="ns-chip" onclick="__ns.setMode('${m.key}')" style="white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:7px;padding:10px 16px;border-radius:999px;border:1px solid ${m.border};background:${m.bg};color:${m.fg};font:600 12.5px 'IBM Plex Sans Thai';cursor:pointer;transition:all .2s;">
-        <span style="width:7px;height:7px;border-radius:50%;background:${m.dot};"></span>${esc(m.label)}
+      <button class="ns-chip" onclick="__ns.setMode('${m.key}')" style="white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 6px;border-radius:999px;border:1px solid ${m.border};background:${m.bg};color:${m.fg};font:600 11.5px 'IBM Plex Sans Thai';cursor:pointer;transition:all .2s;">
+        <span style="width:6px;height:6px;border-radius:50%;background:${m.dot};flex:none;"></span>${esc(m.label)}
       </button>`).join('');
 
     const scanningOverlay = v.scanning ? `
@@ -428,7 +428,7 @@
         ${scanningOverlay}
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:16px 26px 0;position:relative;z-index:3;flex:none;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:16px 22px 0;position:relative;z-index:3;flex:none;">
         ${modesHtml}
       </div>
 
@@ -686,11 +686,12 @@
     const bodyGoalLabel = state.bodyGoal || 'ยังไม่ตั้งค่า';
 
     const modeMeta = {
-      food:    { label:'ถ่ายอาหาร', title:'ถ่ายรูปอาหาร',  hint:'จัดให้อาหารอยู่กลางกรอบ แล้วกดถ่าย' },
-      barcode: { label:'บาร์โค้ด',   title:'สแกนบาร์โค้ด', hint:'เล็งบาร์โค้ดบนบรรจุภัณฑ์ให้อยู่ในกรอบ' },
+      food:    { label:'ถ่ายอาหาร',     title:'ถ่ายรูปอาหาร',         hint:'จัดให้อาหารอยู่กลางกรอบ แล้วกดถ่าย' },
+      barcode: { label:'บาร์โค้ด',       title:'สแกนบาร์โค้ด',          hint:'เล็งบาร์โค้ดบนบรรจุภัณฑ์ให้อยู่ในกรอบ' },
+      label:   { label:'ฉลากโภชนาการ',  title:'สแกนฉลากโภชนาการ',     hint:'ถ่ายตารางโภชนาการให้ชัดและตรง' },
     };
     if (!modeMeta[state.activeMode]) state.activeMode = 'food';
-    const modes = ['food','barcode'].map((k) => {
+    const modes = ['food','barcode','label'].map((k) => {
       const on = state.activeMode === k;
       return {
         key:k, label:modeMeta[k].label,

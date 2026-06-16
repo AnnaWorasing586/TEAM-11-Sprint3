@@ -26,12 +26,13 @@
 
 ## ที่ backend จริงต้องทำต่อ
 
-2 เส้นทาง endpoint ที่ frontend จะเรียก (ตอนนี้ prototype สุ่มจาก mock data แทน):
+3 เส้นทาง endpoint ที่ frontend จะเรียก (ตอนนี้ prototype สุ่มจาก mock data แทน):
 
 | Endpoint | Input | Output |
 |---|---|---|
 | `POST /api/scan/photo` | รูปภาพอาหาร (multipart — จากกล้องหรือแกลเลอรี) | `Food` object ตาม schema ด้านบน |
 | `POST /api/scan/barcode` | `{ "barcode": "8851234567890" }` | `Food` object |
+| `POST /api/scan/label` | รูปฉลากโภชนาการ (multipart) | `Food` object — `name` อาจเป็น `"ผลิตภัณฑ์ที่สแกน"` ถ้า OCR ไม่เจอชื่อแบรนด์ |
 
 ที่ backend จริง ๆ จะต่อ external API:
 
@@ -39,11 +40,20 @@
 |---|---|
 | รูปอาหาร | LogMeal Food AI / Nutritionix Image API / Claude Vision |
 | บาร์โค้ด | Open Food Facts (ฟรี ไม่ต้อง key) — `https://world.openfoodfacts.org/api/v2/product/{barcode}.json` |
+| ฉลาก OCR | CRAFT (text detection — มีโมเดลแล้วใน `backend/craft_mlt_25k.pth`) + Google Cloud Vision / AWS Textract สำหรับ OCR / หรือใช้ Claude Vision ส่งรูปฉลากแล้ว parse ค่าโภชนาการเป็น JSON ตรง ๆ |
+
+## หมายเหตุเรื่องโหมดฉลาก
+
+ฉลากโภชนาการบอก **ค่าสารอาหาร** แต่ไม่ได้บอกชื่อเมนู ดังนั้นในทาง implementation มี 2 ทางเลือก:
+
+1. **OCR เฉพาะตาราง** → คืนค่าโภชนาการ + ตั้งชื่อเป็น `"ผลิตภัณฑ์ที่สแกน"` หรือให้ user พิมพ์ชื่อเอง
+2. **OCR ทั้งบรรจุภัณฑ์** → อ่านทั้งชื่อแบรนด์ + ตารางโภชนาการ → แม่นกว่าแต่ซับซ้อนกว่า
+
+ใน prototype สุ่ม mock data ทุกโหมด ดังนั้นชื่อจะไม่ตรงกับฉลากจริง — เป็นข้อจำกัดที่จะหายไปเมื่อต่อ backend จริง
 
 ## โหมดที่ตัดออกจาก scope
 
-- **สแกนฉลากโภชนาการ:** ตัดออกเพราะฉลากบอกแค่ค่าสารอาหาร ไม่ได้บอกชื่อเมนู ถ้าจะทำต้องใช้ OCR อ่านชื่อผลิตภัณฑ์บนแพ็กเกจคู่ — เกินขอบเขต prototype (CRAFT model ที่มีอยู่ใน `backend/craft_mlt_25k.pth` ใช้ทำ text detection สำหรับ feature นี้ได้ถ้าทีมตัดสินใจกลับมาทำในอนาคต)
-- **โหมดแกลเลอรี:** ตัดออกเพราะซ้ำกับปุ่มอัปโหลดรูปภาพข้างปุ่มถ่าย ทั้งสองทำสิ่งเดียวกัน
+- **โหมดแกลเลอรี (chip):** ตัดออกเพราะซ้ำกับปุ่มอัปโหลดรูปภาพข้างปุ่มถ่าย ทั้งสองทำสิ่งเดียวกัน
 
 ## คำเตือน
 
