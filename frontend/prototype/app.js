@@ -29,6 +29,7 @@
   };
 
   const PREFS_KEY = 'nutriscan.prefs.v1';
+  const BODY_GOALS = ['ลดน้ำหนัก', 'รักษาน้ำหนัก', 'เพิ่มกล้ามเนื้อ'];
   function loadPrefs() {
     try {
       const raw = localStorage.getItem(PREFS_KEY);
@@ -36,8 +37,11 @@
       const p = JSON.parse(raw);
       const out = {};
       if (typeof p.userName === 'string' && p.userName.trim()) out.userName = p.userName.trim().slice(0, 30);
-      if (Number.isFinite(p.dailyGoal)) out.dailyGoal = Math.min(3500, Math.max(1200, Math.round(p.dailyGoal)));
+      if (Number.isFinite(p.dailyGoal)) out.dailyGoal = Math.min(3500, Math.max(0, Math.round(p.dailyGoal)));
       if (ACCENTS[p.accent]) out.accent = p.accent;
+      if (Number.isFinite(p.weight)) out.weight = Math.min(250, Math.max(0, p.weight));
+      if (Number.isFinite(p.height)) out.height = Math.min(230, Math.max(0, p.height));
+      if (BODY_GOALS.includes(p.bodyGoal)) out.bodyGoal = p.bodyGoal;
       return out;
     } catch (e) { return null; }
   }
@@ -47,6 +51,9 @@
         userName:  s.userName,
         dailyGoal: s.dailyGoal,
         accent:    s.accent,
+        weight:    s.weight,
+        height:    s.height,
+        bodyGoal:  s.bodyGoal,
       }));
     } catch (e) {}
   }
@@ -64,7 +71,10 @@
     fConsumed: 0,
     accent: PREFS.accent ?? 'green',
     userName: PREFS.userName ?? 'พีรพล',
-    dailyGoal: PREFS.dailyGoal ?? 2000,
+    dailyGoal: PREFS.dailyGoal ?? 0,
+    weight: PREFS.weight ?? 0,
+    height: PREFS.height ?? 0,
+    bodyGoal: PREFS.bodyGoal ?? '',
     settingsDraft: null,
     meals: [],
   };
@@ -104,9 +114,10 @@
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
   function setState(patch) {
-    const prev = { accent:state.accent, userName:state.userName, dailyGoal:state.dailyGoal };
+    const prev = { accent:state.accent, userName:state.userName, dailyGoal:state.dailyGoal, weight:state.weight, height:state.height, bodyGoal:state.bodyGoal };
     Object.assign(state, typeof patch === 'function' ? patch(state) : patch);
-    if (prev.accent !== state.accent || prev.userName !== state.userName || prev.dailyGoal !== state.dailyGoal) {
+    if (prev.accent !== state.accent || prev.userName !== state.userName || prev.dailyGoal !== state.dailyGoal ||
+        prev.weight !== state.weight || prev.height !== state.height || prev.bodyGoal !== state.bodyGoal) {
       savePrefs(state);
     }
     render();
@@ -117,7 +128,10 @@
     const wasScan = state.page === 'scan';
     if (page === 'settings') {
       if (wasScan) stopCamera();
-      setState({ page, settingsDraft:{ userName:state.userName, dailyGoal:state.dailyGoal, accent:state.accent } });
+      setState({ page, settingsDraft:{
+        userName: state.userName, dailyGoal: state.dailyGoal, accent: state.accent,
+        weight: state.weight, height: state.height, bodyGoal: state.bodyGoal,
+      } });
       return;
     }
     setState({ page, scanStage:'idle' });
@@ -142,15 +156,29 @@
   function saveResult() {
     const f = state.resultFood, s = state.servings;
     const kcal = Math.round(f.kcal * s);
-    const meal = { meal:'เพิ่มล่าสุด', name:f.name, kcal, time:'เมื่อสักครู่', color:'#15a06a', tint:'#e3f4ea' };
+    const p = Math.round(f.protein * s);
+    const c = Math.round(f.carbs   * s);
+    const fat = Math.round(f.fat   * s);
+    const meal = { id: Date.now() + Math.random(), meal:'เพิ่มล่าสุด', name:f.name, kcal, time:'เมื่อสักครู่', color:'#15a06a', tint:'#e3f4ea', protein:p, carbs:c, fat };
     setState((st) => ({
       meals: [meal, ...st.meals],
       consumed:  st.consumed  + kcal,
-      pConsumed: st.pConsumed + Math.round(f.protein * s),
-      cConsumed: st.cConsumed + Math.round(f.carbs   * s),
-      fConsumed: st.fConsumed + Math.round(f.fat     * s),
+      pConsumed: st.pConsumed + p,
+      cConsumed: st.cConsumed + c,
+      fConsumed: st.fConsumed + fat,
       page:'home',
       scanStage:'idle',
+    }));
+  }
+  function deleteMeal(id) {
+    const meal = state.meals.find((m) => String(m.id) === String(id));
+    if (!meal) return;
+    setState((st) => ({
+      meals: st.meals.filter((m) => String(m.id) !== String(id)),
+      consumed:  Math.max(0, st.consumed  - (meal.kcal    || 0)),
+      pConsumed: Math.max(0, st.pConsumed - (meal.protein || 0)),
+      cConsumed: Math.max(0, st.cConsumed - (meal.carbs   || 0)),
+      fConsumed: Math.max(0, st.fConsumed - (meal.fat     || 0)),
     }));
   }
   function setAccent(name) { setState({ accent:name }); }
@@ -164,9 +192,22 @@
     if (!state.settingsDraft) return;
     const d = { ...state.settingsDraft };
     if (field === 'userName')  d.userName  = String(val).slice(0, 30);
-    if (field === 'dailyGoal') d.dailyGoal = Math.min(3500, Math.max(1200, parseInt(val, 10) || 0));
+    if (field === 'dailyGoal') d.dailyGoal = clampGoal(val);
     if (field === 'accent' && ACCENTS[val]) d.accent = val;
+    if (field === 'weight')   d.weight   = clampNum(val, 0, 250);
+    if (field === 'height')   d.height   = clampNum(val, 0, 230);
+    if (field === 'bodyGoal') d.bodyGoal = BODY_GOALS.includes(val) || val === '' ? val : d.bodyGoal;
     setState({ settingsDraft:d });
+  }
+  function clampGoal(val) {
+    const n = parseInt(val, 10);
+    if (!Number.isFinite(n) || n <= 0) return 0;
+    return Math.min(3500, Math.max(1200, n));
+  }
+  function clampNum(val, lo, hi) {
+    const n = parseFloat(val);
+    if (!Number.isFinite(n) || n <= 0) return 0;
+    return Math.min(hi, Math.max(lo, Math.round(n * 10) / 10));
   }
   function saveSettings() {
     const d = state.settingsDraft;
@@ -176,6 +217,9 @@
       userName:  name,
       dailyGoal: d.dailyGoal,
       accent:    d.accent,
+      weight:    d.weight,
+      height:    d.height,
+      bodyGoal:  d.bodyGoal,
       settingsDraft:null,
       page:'home',
     });
@@ -183,10 +227,11 @@
   function cancelSettings() { setState({ settingsDraft:null, page:'home' }); }
   function resetPrefs() {
     try { localStorage.removeItem(PREFS_KEY); } catch (e) {}
-    setState({ userName:'พีรพล', dailyGoal:2000, accent:'green', settingsDraft:{ userName:'พีรพล', dailyGoal:2000, accent:'green' } });
+    const defaults = { userName:'พีรพล', dailyGoal:0, accent:'green', weight:0, height:0, bodyGoal:'' };
+    setState({ ...defaults, settingsDraft:{ ...defaults } });
   }
 
-  window.__ns = { go, setMode, onCapture, changeServing, saveResult, setAccent, updateDraft, saveSettings, cancelSettings, resetPrefs, onFilePicked };
+  window.__ns = { go, setMode, onCapture, changeServing, saveResult, setAccent, updateDraft, saveSettings, cancelSettings, resetPrefs, onFilePicked, deleteMeal };
 
   // ---------- HOME ----------
   function renderHome(v) {
@@ -220,6 +265,9 @@
           <div style="font:500 12px 'IBM Plex Sans Thai';color:#8a9890;margin-top:2px;">${esc(meal.meal)} · ${esc(meal.time)}</div>
         </div>
         <div style="font:800 15px 'Plus Jakarta Sans';color:#1b2722;">${meal.kcal}<span style="font:600 10px 'IBM Plex Sans Thai';color:#a4afa7;"> kcal</span></div>
+        <button title="ลบมื้อนี้" onclick="if(confirm('ลบมื้อ ${esc(meal.name).replace(/'/g,'')} ?'))__ns.deleteMeal('${meal.id}')" style="width:30px;height:30px;border-radius:10px;border:1px solid #f0eadc;background:#fbf8f0;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;flex:none;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a4afa7" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+        </button>
       </div>`).join('') : `
       <div style="text-align:center;padding:24px 18px;background:#fff;border:1px dashed #d8d2c2;border-radius:18px;">
         <div style="font:600 13px 'IBM Plex Sans Thai';color:#1b2722;">ยังไม่ได้บันทึกมื้ออาหาร</div>
@@ -310,9 +358,9 @@
         <div style="display:flex;align-items:center;justify-content:space-between;position:relative;">
           <div>
             <div style="font:600 12px 'IBM Plex Sans Thai';color:#aebfb4;">เป้าหมายของคุณ</div>
-            <div style="font:800 19px 'Plus Jakarta Sans','IBM Plex Sans Thai';margin-top:3px;">ยังไม่ตั้งค่า</div>
+            <div style="font:800 19px 'Plus Jakarta Sans','IBM Plex Sans Thai';margin-top:3px;">${esc(v.bodyGoalLabel)}</div>
           </div>
-          <div style="background:rgba(126,208,168,.18);color:#9fe3bf;font:700 11px 'IBM Plex Sans Thai';padding:7px 12px;border-radius:999px;">เริ่มกันเลย</div>
+          <button onclick="__ns.go('settings')" style="background:rgba(126,208,168,.18);color:#9fe3bf;font:700 11px 'IBM Plex Sans Thai';padding:7px 12px;border-radius:999px;border:none;cursor:pointer;">ตั้งค่า</button>
         </div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px;position:relative;">
           ${bodyHtml}
@@ -515,12 +563,36 @@
         <label style="display:block;font:600 12px 'IBM Plex Sans Thai';color:#56655d;margin-bottom:6px;">ชื่อที่แสดง</label>
         <input id="ns-input-name" type="text" value="${esc(d.userName)}" maxlength="30" oninput="__ns.updateDraft('userName', this.value)" style="width:100%;padding:13px 14px;border-radius:14px;border:1px solid #e2ddcf;background:#faf8f1;font:600 14px 'IBM Plex Sans Thai';color:#1b2722;outline:none;">
 
-        <label style="display:block;font:600 12px 'IBM Plex Sans Thai';color:#56655d;margin:18px 0 6px;">เป้าหมายแคลอรีต่อวัน (1200–3500)</label>
+        <label style="display:block;font:600 12px 'IBM Plex Sans Thai';color:#56655d;margin:18px 0 6px;">เป้าหมายแคลอรีต่อวัน (1200–3500 · 0 = ยังไม่ตั้ง)</label>
         <div style="display:flex;align-items:center;gap:12px;">
-          <input id="ns-input-goal" type="number" min="1200" max="3500" step="50" value="${d.dailyGoal}" oninput="__ns.updateDraft('dailyGoal', this.value)" style="flex:none;width:110px;padding:13px 14px;border-radius:14px;border:1px solid #e2ddcf;background:#faf8f1;font:700 16px 'Plus Jakarta Sans';color:#1b2722;outline:none;text-align:center;">
-          <input type="range" min="1200" max="3500" step="50" value="${d.dailyGoal}" oninput="__ns.updateDraft('dailyGoal', this.value)" style="flex:1;accent-color:${ACCENTS[d.accent][0]};">
+          <input id="ns-input-goal" type="number" min="0" max="3500" step="50" value="${d.dailyGoal}" oninput="__ns.updateDraft('dailyGoal', this.value)" style="flex:none;width:110px;padding:13px 14px;border-radius:14px;border:1px solid #e2ddcf;background:#faf8f1;font:700 16px 'Plus Jakarta Sans';color:#1b2722;outline:none;text-align:center;">
+          <input type="range" min="0" max="3500" step="50" value="${d.dailyGoal}" oninput="__ns.updateDraft('dailyGoal', this.value)" style="flex:1;accent-color:${ACCENTS[d.accent][0]};">
         </div>
-        <div style="font:500 11.5px 'IBM Plex Sans Thai';color:#8a9890;margin-top:6px;">AI คำนวณ TDEE ของคุณราว 2,000 kcal</div>
+      </div>
+
+      <div style="margin:14px 18px 0;background:#fff;border:1px solid #efe9da;border-radius:24px;padding:20px;box-shadow:0 18px 40px -36px rgba(27,39,34,.4);">
+        <div style="font:700 14px 'IBM Plex Sans Thai';color:#1b2722;margin-bottom:14px;">ข้อมูลร่างกาย</div>
+
+        <div style="display:flex;gap:11px;">
+          <div style="flex:1;">
+            <label style="display:block;font:600 12px 'IBM Plex Sans Thai';color:#56655d;margin-bottom:6px;">น้ำหนัก (กก.)</label>
+            <input id="ns-input-weight" type="number" min="0" max="250" step="0.1" value="${d.weight || ''}" placeholder="0" oninput="__ns.updateDraft('weight', this.value)" style="width:100%;padding:13px 14px;border-radius:14px;border:1px solid #e2ddcf;background:#faf8f1;font:700 16px 'Plus Jakarta Sans';color:#1b2722;outline:none;text-align:center;">
+          </div>
+          <div style="flex:1;">
+            <label style="display:block;font:600 12px 'IBM Plex Sans Thai';color:#56655d;margin-bottom:6px;">ส่วนสูง (ซม.)</label>
+            <input id="ns-input-height" type="number" min="0" max="230" step="1" value="${d.height || ''}" placeholder="0" oninput="__ns.updateDraft('height', this.value)" style="width:100%;padding:13px 14px;border-radius:14px;border:1px solid #e2ddcf;background:#faf8f1;font:700 16px 'Plus Jakarta Sans';color:#1b2722;outline:none;text-align:center;">
+          </div>
+        </div>
+
+        <label style="display:block;font:600 12px 'IBM Plex Sans Thai';color:#56655d;margin:18px 0 8px;">เป้าหมายของคุณ</label>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          ${['', ...BODY_GOALS].map((g) => {
+            const on = (d.bodyGoal || '') === g;
+            const lbl = g === '' ? 'ยังไม่ตั้ง' : g;
+            const c = ACCENTS[d.accent][0];
+            return `<button onclick="__ns.updateDraft('bodyGoal','${g}')" style="flex:1 1 calc(50% - 4px);padding:11px 8px;border-radius:14px;border:1px solid ${on ? c : '#e2ddcf'};background:${on ? ACCENTS[d.accent][1] : '#faf8f1'};color:${on ? c : '#1b2722'};font:700 12.5px 'IBM Plex Sans Thai';cursor:pointer;transition:all .2s;">${lbl}</button>`;
+          }).join('')}
+        </div>
       </div>
 
       <div style="margin:14px 18px 0;background:#fff;border:1px solid #efe9da;border-radius:24px;padding:20px;box-shadow:0 18px 40px -36px rgba(27,39,34,.4);">
@@ -572,10 +644,11 @@
     const goal = state.dailyGoal;
     const userName = state.userName;
     const consumed = state.consumed;
-    const remaining = Math.max(0, goal - consumed);
-    const consumedPct = Math.min(100, Math.round(consumed / goal * 100));
+    const goalSet = goal > 0;
+    const remaining = goalSet ? Math.max(0, goal - consumed) : 0;
+    const consumedPct = goalSet ? Math.min(100, Math.round(consumed / goal * 100)) : 0;
     const C = 2 * Math.PI * 84;
-    const ringOffset = C * (1 - Math.min(1, consumed / goal));
+    const ringOffset = goalSet ? C * (1 - Math.min(1, consumed / goal)) : C;
 
     const h = new Date().getHours();
     const greeting = h < 11 ? 'สวัสดีตอนเช้า ☀' : h < 17 ? 'สวัสดีตอนบ่าย' : 'สวัสดีตอนเย็น';
@@ -601,12 +674,16 @@
     });
     const weekAvg = nf(Math.round((wbase.reduce((a,b) => a+b, 0) + consumed) / 7));
 
+    const w = state.weight, hcm = state.height;
+    const bmi = (w > 0 && hcm > 0) ? +(w / Math.pow(hcm / 100, 2)).toFixed(1) : 0;
+    const tdee = w > 0 ? Math.round(w * 33) : 0;
     const body = [
-      { v:'—', k:'TDEE kcal' },
-      { v:'—', k:'น้ำหนัก กก.' },
-      { v:'—', k:'ส่วนสูง ซม.' },
-      { v:'—', k:'BMI' },
+      { v: tdee > 0 ? nf(tdee) : '—',  k: 'TDEE kcal' },
+      { v: w    > 0 ? String(w)    : '—', k: 'น้ำหนัก กก.' },
+      { v: hcm  > 0 ? String(hcm)  : '—', k: 'ส่วนสูง ซม.' },
+      { v: bmi  > 0 ? bmi.toFixed(1) : '—', k: 'BMI' },
     ];
+    const bodyGoalLabel = state.bodyGoal || 'ยังไม่ตั้งค่า';
 
     const modeMeta = {
       food:    { label:'ถ่ายอาหาร', title:'ถ่ายรูปอาหาร',  hint:'จัดให้อาหารอยู่กลางกรอบ แล้วกดถ่าย' },
@@ -649,7 +726,7 @@
 
     return {
       accent, accentSoft, userName, initial:userName.charAt(0), greeting, nextAccent,
-      remaining:nf(remaining), goalLabel:nf(goal), consumedLabel:nf(consumed), consumedPct, ringOffset,
+      remaining: goalSet ? nf(remaining) : '—', goalLabel: goalSet ? nf(goal) : '—', consumedLabel:nf(consumed), consumedPct, ringOffset, goalSet, bodyGoalLabel,
       macros, week, weekAvg, body, meals:state.meals,
       modes, modeTitle:mm.title, modeHint:mm.hint,
       scanning:state.scanStage === 'analyzing',
