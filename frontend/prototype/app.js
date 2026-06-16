@@ -468,8 +468,8 @@
       <div style="margin:14px 18px 0;background:#fff;border:1px solid #efe9da;border-radius:24px;padding:18px;box-shadow:0 18px 40px -36px rgba(27,39,34,.4);">
         <div style="font:700 15px 'IBM Plex Sans Thai';color:#1b2722;margin-bottom:6px;">สารอาหารต่อมื้อ</div>
         ${nutHtml}
-        <div style="display:flex;align-items:center;gap:8px;margin-top:13px;font:500 11.5px 'IBM Plex Sans Thai';color:var(--accent);">
-          <span style="width:6px;height:6px;border-radius:50%;background:var(--accent);"></span>คำนวณโดย AI เทียบกับปริมาณแนะนำต่อวันของคุณ
+        <div style="display:flex;align-items:flex-start;gap:8px;margin-top:13px;font:500 11.5px/1.5 'IBM Plex Sans Thai';color:var(--accent);">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--accent);margin-top:6px;flex:none;"></span><span>คำนวณโดย AI · ค่าโดยประมาณ ควรตรวจสอบกับฉลากของผลิตภัณฑ์อีกครั้ง</span>
         </div>
       </div>
 
@@ -609,12 +609,11 @@
     ];
 
     const modeMeta = {
-      food:    { label:'ถ่ายอาหาร',       title:'ถ่ายรูปอาหาร',         hint:'จัดให้อาหารอยู่กลางกรอบ แล้วกดถ่าย' },
-      barcode: { label:'บาร์โค้ด',         title:'สแกนบาร์โค้ด',          hint:'เล็งบาร์โค้ดบนบรรจุภัณฑ์ให้อยู่ในกรอบ' },
-      label:   { label:'ฉลากโภชนาการ',    title:'สแกนฉลากโภชนาการ',     hint:'ถ่ายตารางโภชนาการให้ชัดและตรง' },
-      gallery: { label:'แกลเลอรี',          title:'เลือกจากแกลเลอรี',       hint:'เลือกรูปอาหารจากคลังภาพของคุณ' },
+      food:    { label:'ถ่ายอาหาร', title:'ถ่ายรูปอาหาร',  hint:'จัดให้อาหารอยู่กลางกรอบ แล้วกดถ่าย' },
+      barcode: { label:'บาร์โค้ด',   title:'สแกนบาร์โค้ด', hint:'เล็งบาร์โค้ดบนบรรจุภัณฑ์ให้อยู่ในกรอบ' },
     };
-    const modes = ['food','barcode','label','gallery'].map((k) => {
+    if (!modeMeta[state.activeMode]) state.activeMode = 'food';
+    const modes = ['food','barcode'].map((k) => {
       const on = state.activeMode === k;
       return {
         key:k, label:modeMeta[k].label,

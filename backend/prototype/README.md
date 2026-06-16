@@ -26,13 +26,12 @@
 
 ## ที่ backend จริงต้องทำต่อ
 
-3 เส้นทาง endpoint ที่ frontend จะเรียก (ตอนนี้ prototype สุ่มจาก mock data แทน):
+2 เส้นทาง endpoint ที่ frontend จะเรียก (ตอนนี้ prototype สุ่มจาก mock data แทน):
 
 | Endpoint | Input | Output |
 |---|---|---|
-| `POST /api/scan/photo` | รูปภาพอาหาร (multipart) | `Food` object ตาม schema ด้านบน |
+| `POST /api/scan/photo` | รูปภาพอาหาร (multipart — จากกล้องหรือแกลเลอรี) | `Food` object ตาม schema ด้านบน |
 | `POST /api/scan/barcode` | `{ "barcode": "8851234567890" }` | `Food` object |
-| `POST /api/scan/label` | รูปฉลากโภชนาการ | `Food` object |
 
 ที่ backend จริง ๆ จะต่อ external API:
 
@@ -40,9 +39,11 @@
 |---|---|
 | รูปอาหาร | LogMeal Food AI / Nutritionix Image API / Claude Vision |
 | บาร์โค้ด | Open Food Facts (ฟรี ไม่ต้อง key) — `https://world.openfoodfacts.org/api/v2/product/{barcode}.json` |
-| ฉลาก OCR | Google Cloud Vision / AWS Textract (อ่านภาษาไทยได้) |
 
-CRAFT model ที่มีอยู่แล้วใน `backend/craft_mlt_25k.pth` ใช้ทำ text detection สำหรับ OCR ฉลากได้
+## โหมดที่ตัดออกจาก scope
+
+- **สแกนฉลากโภชนาการ:** ตัดออกเพราะฉลากบอกแค่ค่าสารอาหาร ไม่ได้บอกชื่อเมนู ถ้าจะทำต้องใช้ OCR อ่านชื่อผลิตภัณฑ์บนแพ็กเกจคู่ — เกินขอบเขต prototype (CRAFT model ที่มีอยู่ใน `backend/craft_mlt_25k.pth` ใช้ทำ text detection สำหรับ feature นี้ได้ถ้าทีมตัดสินใจกลับมาทำในอนาคต)
+- **โหมดแกลเลอรี:** ตัดออกเพราะซ้ำกับปุ่มอัปโหลดรูปภาพข้างปุ่มถ่าย ทั้งสองทำสิ่งเดียวกัน
 
 ## คำเตือน
 
