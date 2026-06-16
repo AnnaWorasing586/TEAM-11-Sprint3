@@ -65,6 +65,7 @@
     activeMode: 'food',
     servings: 1,
     resultFood: FOODS[0],
+    resultImage: null,
     consumed: 0,
     pConsumed: 0,
     cConsumed: 0,
@@ -181,18 +182,21 @@
     if (state.scanStage === 'analyzing') return;
     setState({ scanStage:'analyzing' });
     const mode = state.activeMode;
-    let food = null;
+    let blob = null;
     if (mode === 'food' || mode === 'label') {
-      const blob = await captureVideoFrame();
-      if (blob && API_URL) food = await callRealAPI(blob, mode);
+      blob = await captureVideoFrame();
     }
+    let food = null;
+    if (blob && API_URL) food = await callRealAPI(blob, mode);
     if (!food) {
       await new Promise((r) => { scanTimer = setTimeout(r, API_URL ? 200 : 1900); });
       scanTimer = null;
       food = pickMock();
     }
     if (state.page !== 'scan') return;
-    setState({ scanStage:'idle', resultFood:food, servings:1, page:'result' });
+    if (state.resultImage) URL.revokeObjectURL(state.resultImage);
+    const imgUrl = blob ? URL.createObjectURL(blob) : null;
+    setState({ scanStage:'idle', resultFood:food, resultImage:imgUrl, servings:1, page:'result' });
   }
   function saveResult() {
     const f = state.resultFood, s = state.servings;
@@ -238,7 +242,9 @@
       await new Promise((r) => setTimeout(r, API_URL ? 200 : 1500));
       food = pickMock();
     }
-    setState({ scanStage:'idle', resultFood:food, servings:1, page:'result' });
+    if (state.resultImage) URL.revokeObjectURL(state.resultImage);
+    const imgUrl = URL.createObjectURL(file);
+    setState({ scanStage:'idle', resultFood:food, resultImage:imgUrl, servings:1, page:'result' });
   }
 
   function updateDraft(field, val) {
@@ -530,9 +536,11 @@
       </header>
 
       <div style="margin:8px 18px 0;border-radius:28px;overflow:hidden;background:#fff;border:1px solid #efe9da;box-shadow:0 24px 50px -34px rgba(27,39,34,.45);">
-        <div style="height:158px;position:relative;background:repeating-linear-gradient(45deg,#eee7d6,#eee7d6 13px,#f6f1e4 13px,#f6f1e4 26px);display:flex;align-items:center;justify-content:center;">
-          <span style="font:600 11px 'Plus Jakarta Sans';color:#b3aa93;letter-spacing:.5px;">FOOD PHOTO</span>
-          <div style="position:absolute;left:14px;top:14px;display:flex;align-items:center;gap:6px;background:rgba(27,39,34,.82);color:#9fe3bf;font:600 11px 'IBM Plex Sans Thai';padding:7px 11px;border-radius:999px;backdrop-filter:blur(4px);"><span style="width:6px;height:6px;border-radius:50%;background:#9fe3bf;"></span>ตรวจพบแล้ว</div>
+        <div style="height:200px;position:relative;overflow:hidden;${v.resultImage ? 'background:#1b2722;' : 'background:repeating-linear-gradient(45deg,#eee7d6,#eee7d6 13px,#f6f1e4 13px,#f6f1e4 26px);display:flex;align-items:center;justify-content:center;'}">
+          ${v.resultImage
+            ? `<img src="${v.resultImage}" alt="รูปที่สแกน" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">`
+            : `<span style="font:600 11px 'Plus Jakarta Sans';color:#b3aa93;letter-spacing:.5px;">FOOD PHOTO</span>`}
+          <div style="position:absolute;left:14px;top:14px;display:flex;align-items:center;gap:6px;background:rgba(27,39,34,.82);color:#9fe3bf;font:600 11px 'IBM Plex Sans Thai';padding:7px 11px;border-radius:999px;backdrop-filter:blur(4px);z-index:2;"><span style="width:6px;height:6px;border-radius:50%;background:#9fe3bf;"></span>ตรวจพบแล้ว</div>
         </div>
         <div style="padding:16px 18px;">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
@@ -785,7 +793,7 @@
       modes, modeTitle:mm.title, modeHint:mm.hint,
       scanning:state.scanStage === 'analyzing',
       camLive, camHint,
-      food:f, resultKcal:nf(resultKcal), confidence:f.confidence, goalSharePct,
+      food:f, resultKcal:nf(resultKcal), confidence:f.confidence, goalSharePct, resultImage:state.resultImage,
       nutrients, servingLabel,
       draft: state.settingsDraft || { userName, dailyGoal:goal, accent:state.accent },
       navHomeColor:   state.page === 'home'   ? accent : '#9aa8a0',
