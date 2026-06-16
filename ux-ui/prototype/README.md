@@ -6,25 +6,16 @@
 
 ```
 ux-ui/prototype/
-├── README.md          # ไฟล์นี้
-└── source/            # ของจาก Claude Design handoff (ไม่แก้ไข — เก็บเป็น snapshot)
-    ├── README.md      # README ต้นทางจาก handoff bundle
-    ├── NutriScan AI.dc.html   # design ต้นทางใช้ DC template engine
-    ├── support.js     # DC framework runtime
-    └── screens/       # screenshot อ้างอิง
-        ├── home.png
-        ├── scan.png
-        └── scan2.png
+└── README.md          # ไฟล์นี้ (design tokens + animation catalog)
 ```
 
 ## โค้ดที่รันได้ อยู่ที่ไหน
 
-**ไม่ใช่ที่นี่** — โค้ด prototype ที่รันได้อยู่ที่ `frontend/prototype/` (HTML/CSS/JS แยก 3 ไฟล์)
+โค้ด prototype ที่รันได้อยู่ที่ `frontend/prototype/` (HTML/CSS/JS แยก 3 ไฟล์)
 
-`source/` เก็บไว้เพื่อ:
-1. Audit ตามต้นทาง — ถ้าทีมอยากย้อนดูว่า design เดิมตั้งใจให้เป็นยังไง
-2. Re-generate prototype ใหม่ในอนาคต — ถ้าต้องการ refactor
-3. เป็นหลักฐานว่า prototype มาจากไหน
+## ที่มาของ prototype
+
+สร้างจาก Claude Design handoff bundle ของทีม — ไฟล์ต้นฉบับ (`NutriScan AI.dc.html`, `support.js`, screenshot) เก็บไว้ใน local ไม่ขึ้น GitHub (ดู `.gitignore`) ถ้าทีมต้องการ ขอจาก @67050586
 
 ## Design tokens
 
