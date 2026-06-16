@@ -1,0 +1,51 @@
+# Backend Prototype — Mock Data
+
+ยังไม่มี server จริงสำหรับ prototype — มีแค่ **mock data** ให้ backend dev ใช้เป็นจุดเริ่ม schema และทดสอบ frontend
+
+## ไฟล์
+
+| ไฟล์ | หน้าที่ |
+|---|---|
+| `foods.json` | ฐานข้อมูล mock 20 รายการอาหาร — schema เดียวกับที่ frontend prototype ใช้ |
+
+## Schema
+
+```json
+{
+  "name":       "ข้าวผัดกะเพราไก่ไข่ดาว",
+  "tag":        "จานเดียว · 1 จาน",
+  "kcal":       620,
+  "protein":    28,      // g
+  "carbs":      68,      // g
+  "fat":        26,      // g
+  "sugar":      6,       // g
+  "sodium":     980,     // mg
+  "confidence": 94       // % AI confidence (0-100)
+}
+```
+
+## ที่ backend จริงต้องทำต่อ
+
+3 เส้นทาง endpoint ที่ frontend จะเรียก (ตอนนี้ prototype สุ่มจาก mock data แทน):
+
+| Endpoint | Input | Output |
+|---|---|---|
+| `POST /api/scan/photo` | รูปภาพอาหาร (multipart) | `Food` object ตาม schema ด้านบน |
+| `POST /api/scan/barcode` | `{ "barcode": "8851234567890" }` | `Food` object |
+| `POST /api/scan/label` | รูปฉลากโภชนาการ | `Food` object |
+
+ที่ backend จริง ๆ จะต่อ external API:
+
+| งาน | บริการแนะนำ |
+|---|---|
+| รูปอาหาร | LogMeal Food AI / Nutritionix Image API / Claude Vision |
+| บาร์โค้ด | Open Food Facts (ฟรี ไม่ต้อง key) — `https://world.openfoodfacts.org/api/v2/product/{barcode}.json` |
+| ฉลาก OCR | Google Cloud Vision / AWS Textract (อ่านภาษาไทยได้) |
+
+CRAFT model ที่มีอยู่แล้วใน `backend/craft_mlt_25k.pth` ใช้ทำ text detection สำหรับ OCR ฉลากได้
+
+## คำเตือน
+
+- อย่าใส่ API key ใน frontend — wrap ไว้ใน backend เสมอ
+- Cache ผล AI ตาม hash ของรูปเพื่อประหยัด quota
+- ถ้า confidence < 70% ให้ส่ง flag กลับ frontend ให้ user ยืนยันก่อนบันทึก

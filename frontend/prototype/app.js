@@ -1,39 +1,3 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NutriScan AI</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-  body{margin:0;background:#e9e4d8;}
-  ::-webkit-scrollbar{width:0;height:0;}
-  @keyframes ns-scanline{0%{top:6%;opacity:0;}12%{opacity:1;}88%{opacity:1;}100%{top:94%;opacity:0;}}
-  @keyframes ns-fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
-  @keyframes ns-pop{0%{opacity:0;transform:scale(.92);}60%{transform:scale(1.02);}100%{opacity:1;transform:scale(1);}}
-  @keyframes ns-spin{to{transform:rotate(360deg);}}
-  @keyframes ns-dots{0%,80%,100%{opacity:.25;transform:scale(.8);}40%{opacity:1;transform:scale(1);}}
-  @keyframes ns-float{0%,100%{transform:translateY(0);}50%{transform:translateY(-16px);}}
-  @keyframes ns-pulseRing{0%{transform:scale(.85);opacity:.55;}70%{transform:scale(1.25);opacity:0;}100%{opacity:0;}}
-  @keyframes ns-shimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
-  .ns-screen{animation:ns-fadeUp .5s cubic-bezier(.22,1,.36,1) both;}
-  .ns-chip:hover{filter:brightness(1.05);}
-</style>
-</head>
-<body>
-<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:'IBM Plex Sans Thai','Plus Jakarta Sans',sans-serif;background:radial-gradient(1200px 700px at 12% -8%,#fbeede 0%,transparent 55%),radial-gradient(1000px 700px at 108% 8%,#dff1e6 0%,transparent 50%),linear-gradient(160deg,#efe9dc,#e6e0d2);position:relative;overflow:hidden;">
-
-  <div aria-hidden="true" style="position:absolute;width:340px;height:340px;border-radius:50%;left:-90px;top:8%;background:radial-gradient(circle at 30% 30%,rgba(126,208,168,.5),rgba(126,208,168,0));filter:blur(8px);animation:ns-float 9s ease-in-out infinite;"></div>
-  <div aria-hidden="true" style="position:absolute;width:300px;height:300px;border-radius:50%;right:-70px;bottom:6%;background:radial-gradient(circle at 60% 40%,rgba(255,170,120,.42),rgba(255,170,120,0));filter:blur(8px);animation:ns-float 11s ease-in-out infinite reverse;"></div>
-
-  <div id="app-root" style="position:relative;width:min(440px,100vw);height:min(900px,100dvh);background:#f4f1ea;border-radius:42px;box-shadow:0 40px 90px -30px rgba(27,39,34,.45),0 0 0 1px rgba(27,39,34,.04);overflow:hidden;--accent:#15a06a;--accent-soft:#e3f4ea;"></div>
-
-</div>
-
-<script>
 (() => {
   const FOODS = [
     { name:'ข้าวผัดกะเพราไก่ไข่ดาว',     tag:'จานเดียว · 1 จาน',  kcal:620, protein:28, carbs:68, fat:26, sugar:6,  sodium:980,  confidence:94 },
@@ -682,6 +646,3 @@
 
   render();
 })();
-</script>
-</body>
-</html>
