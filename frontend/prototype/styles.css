@@ -11,3 +11,24 @@
   @keyframes ns-shimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
   .ns-screen{animation:ns-fadeUp .5s cubic-bezier(.22,1,.36,1) both;}
   .ns-chip:hover{filter:brightness(1.05);}
+
+  /* Mobile full-bleed — เต็มจอบน iPhone/Android */
+  @media (max-width: 500px) {
+    .ns-wrap { padding: 0 !important; background: #f4f1ea !important; }
+    .ns-blob { display: none; }
+    #app-root {
+      width: 100vw !important;
+      height: 100dvh !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+    }
+  }
+  /* iOS safe-area สำหรับ notch + home indicator */
+  @supports (padding: max(0px)) {
+    @media (max-width: 500px) {
+      #app-root {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+    }
+  }

@@ -75,7 +75,35 @@
 
   let scanTimer = null;
   let lastPage = null;
+  let cameraStream = null;
+  let cameraTried = false;
   const root = document.getElementById('app-root');
+
+  async function startCamera() {
+    if (cameraStream) return;
+    cameraTried = true;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      render();
+      return;
+    }
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false,
+      });
+      render();
+    } catch (err) {
+      cameraStream = null;
+      render();
+    }
+  }
+  function stopCamera() {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((t) => t.stop());
+      cameraStream = null;
+    }
+    cameraTried = false;
+  }
   const nf = (n) => n.toLocaleString('en-US');
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -90,11 +118,15 @@
 
   function go(page) {
     if (page === 'scan' && scanTimer) { clearTimeout(scanTimer); scanTimer = null; }
+    const wasScan = state.page === 'scan';
     if (page === 'settings') {
+      if (wasScan) stopCamera();
       setState({ page, settingsDraft:{ userName:state.userName, dailyGoal:state.dailyGoal, accent:state.accent } });
       return;
     }
     setState({ page, scanStage:'idle' });
+    if (wasScan && page !== 'scan') stopCamera();
+    if (!wasScan && page === 'scan') startCamera();
   }
   function setMode(key)     { setState({ activeMode: key }); }
   function changeServing(d) {
@@ -335,9 +367,10 @@
       </div>
 
       <div style="margin:18px 26px 0;flex:1;min-height:84px;border-radius:28px;position:relative;overflow:hidden;background:repeating-linear-gradient(45deg,#27332c,#27332c 12px,#222e27 12px,#222e27 24px);">
-        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;">
+        <video id="ns-cam" autoplay muted playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;opacity:${v.camLive ? 1 : 0};transition:opacity .3s;"></video>
+        <div style="position:absolute;inset:0;display:${v.camLive ? 'none' : 'flex'};align-items:center;justify-content:center;flex-direction:column;gap:8px;text-align:center;padding:0 24px;">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#56655d" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L8 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-4l-1.5-2Z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>
-          <span style="font:600 11px 'Plus Jakarta Sans';color:#56655d;letter-spacing:.5px;">CAMERA FEED</span>
+          <span style="font:600 11px 'Plus Jakarta Sans';color:#56655d;letter-spacing:.5px;">${v.camHint}</span>
         </div>
         <div style="position:absolute;left:18px;top:18px;width:34px;height:34px;border-left:3px solid #9fe3bf;border-top:3px solid #9fe3bf;border-radius:6px 0 0 0;"></div>
         <div style="position:absolute;right:18px;top:18px;width:34px;height:34px;border-right:3px solid #9fe3bf;border-top:3px solid #9fe3bf;border-radius:0 6px 0 0;"></div>
@@ -515,7 +548,7 @@
   // ---------- BOTTOM NAV ----------
   function renderNav(v) {
     return `
-    <nav style="position:absolute;left:0;right:0;bottom:0;height:84px;background:rgba(255,255,255,.86);backdrop-filter:blur(18px);border-top:1px solid rgba(27,39,34,.06);display:flex;align-items:center;justify-content:space-around;padding:0 26px 14px;z-index:20;">
+    <nav style="position:absolute;left:0;right:0;bottom:0;background:rgba(255,255,255,.86);backdrop-filter:blur(18px);border-top:1px solid rgba(27,39,34,.06);display:flex;align-items:center;justify-content:space-around;padding:14px 26px max(14px,env(safe-area-inset-bottom));z-index:20;">
       <button onclick="__ns.go('home')" style="display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:none;cursor:pointer;">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${v.navHomeColor}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"></path></svg>
         <span style="font:600 10.5px 'IBM Plex Sans Thai';color:${v.navHomeColor};">หน้าหลัก</span>
@@ -610,12 +643,18 @@
     const idx = accentOrder.indexOf(state.accent);
     const nextAccent = accentOrder[(idx + 1) % accentOrder.length];
 
+    const camLive = !!cameraStream;
+    const camHint = camLive ? 'CAMERA FEED'
+      : cameraTried ? 'กล้องไม่พร้อม · เปิดใน Safari หรืออัปโหลดรูป'
+      : 'CAMERA FEED';
+
     return {
       accent, accentSoft, userName, initial:userName.charAt(0), greeting, nextAccent,
       remaining:nf(remaining), goalLabel:nf(goal), consumedLabel:nf(consumed), consumedPct, ringOffset,
       macros, week, weekAvg, body, meals:state.meals,
       modes, modeTitle:mm.title, modeHint:mm.hint,
       scanning:state.scanStage === 'analyzing',
+      camLive, camHint,
       food:f, resultKcal:nf(resultKcal), confidence:f.confidence, goalSharePct,
       nutrients, servingLabel,
       draft: state.settingsDraft || { userName, dailyGoal:goal, accent:state.accent },
@@ -649,6 +688,14 @@
       if (next) {
         next.focus({ preventScroll:true });
         try { if (selStart != null) next.setSelectionRange(selStart, selEnd); } catch (e) {}
+      }
+    }
+
+    if (state.page === 'scan' && cameraStream) {
+      const vid = document.getElementById('ns-cam');
+      if (vid && vid.srcObject !== cameraStream) {
+        vid.srcObject = cameraStream;
+        vid.play().catch(() => {});
       }
     }
   }

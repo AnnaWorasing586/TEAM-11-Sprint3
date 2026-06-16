@@ -2,7 +2,9 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>NutriScan AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -10,10 +12,10 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:'IBM Plex Sans Thai','Plus Jakarta Sans',sans-serif;background:radial-gradient(1200px 700px at 12% -8%,#fbeede 0%,transparent 55%),radial-gradient(1000px 700px at 108% 8%,#dff1e6 0%,transparent 50%),linear-gradient(160deg,#efe9dc,#e6e0d2);position:relative;overflow:hidden;">
+<div class="ns-wrap" style="min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:'IBM Plex Sans Thai','Plus Jakarta Sans',sans-serif;background:radial-gradient(1200px 700px at 12% -8%,#fbeede 0%,transparent 55%),radial-gradient(1000px 700px at 108% 8%,#dff1e6 0%,transparent 50%),linear-gradient(160deg,#efe9dc,#e6e0d2);position:relative;overflow:hidden;">
 
-  <div aria-hidden="true" style="position:absolute;width:340px;height:340px;border-radius:50%;left:-90px;top:8%;background:radial-gradient(circle at 30% 30%,rgba(126,208,168,.5),rgba(126,208,168,0));filter:blur(8px);animation:ns-float 9s ease-in-out infinite;"></div>
-  <div aria-hidden="true" style="position:absolute;width:300px;height:300px;border-radius:50%;right:-70px;bottom:6%;background:radial-gradient(circle at 60% 40%,rgba(255,170,120,.42),rgba(255,170,120,0));filter:blur(8px);animation:ns-float 11s ease-in-out infinite reverse;"></div>
+  <div class="ns-blob" aria-hidden="true" style="position:absolute;width:340px;height:340px;border-radius:50%;left:-90px;top:8%;background:radial-gradient(circle at 30% 30%,rgba(126,208,168,.5),rgba(126,208,168,0));filter:blur(8px);animation:ns-float 9s ease-in-out infinite;"></div>
+  <div class="ns-blob" aria-hidden="true" style="position:absolute;width:300px;height:300px;border-radius:50%;right:-70px;bottom:6%;background:radial-gradient(circle at 60% 40%,rgba(255,170,120,.42),rgba(255,170,120,0));filter:blur(8px);animation:ns-float 11s ease-in-out infinite reverse;"></div>
 
   <div id="app-root" style="position:relative;width:min(440px,100vw);height:min(900px,100dvh);background:#f4f1ea;border-radius:42px;box-shadow:0 40px 90px -30px rgba(27,39,34,.45),0 0 0 1px rgba(27,39,34,.04);overflow:hidden;--accent:#15a06a;--accent-soft:#e3f4ea;"></div>
 
