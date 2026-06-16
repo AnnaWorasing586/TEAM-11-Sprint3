@@ -6,7 +6,11 @@
 
 ```
 ux-ui/prototype/
-└── README.md          # ไฟล์นี้ (design tokens + animation catalog)
+├── README.md              # ไฟล์นี้ (design tokens + animation catalog)
+└── source/screens/        # visual reference ของ 3 หน้า
+    ├── home.png
+    ├── scan.png
+    └── scan2.png
 ```
 
 ## โค้ดที่รันได้ อยู่ที่ไหน
@@ -15,7 +19,7 @@ ux-ui/prototype/
 
 ## ที่มาของ prototype
 
-สร้างจาก Claude Design handoff bundle ของทีม — ไฟล์ต้นฉบับ (`NutriScan AI.dc.html`, `support.js`, screenshot) เก็บไว้ใน local ไม่ขึ้น GitHub (ดู `.gitignore`) ถ้าทีมต้องการ ขอจาก @67050586
+ดีไซน์ใน design tool แล้ว export เป็น HTML/CSS/JS — ไฟล์ source ต้นฉบับเก็บไว้ใน local เท่านั้น (ไม่ขึ้น GitHub) ส่วน screenshot ของ 3 หน้าอยู่ใน `source/screens/` ไว้ใช้อ้างอิงเวลาทำ slide หรือ review
 
 ## Design tokens
 
