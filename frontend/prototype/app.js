@@ -74,6 +74,7 @@
   };
 
   let scanTimer = null;
+  let lastPage = null;
   const root = document.getElementById('app-root');
   const nf = (n) => n.toLocaleString('en-US');
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -125,6 +126,11 @@
     }));
   }
   function setAccent(name) { setState({ accent:name }); }
+  function onFilePicked(input) {
+    if (!input.files || !input.files[0]) return;
+    input.value = '';
+    onCapture();
+  }
 
   function updateDraft(field, val) {
     if (!state.settingsDraft) return;
@@ -152,7 +158,7 @@
     setState({ userName:'พีรพล', dailyGoal:2000, accent:'green', settingsDraft:{ userName:'พีรพล', dailyGoal:2000, accent:'green' } });
   }
 
-  window.__ns = { go, setMode, onCapture, changeServing, saveResult, setAccent, updateDraft, saveSettings, cancelSettings, resetPrefs };
+  window.__ns = { go, setMode, onCapture, changeServing, saveResult, setAccent, updateDraft, saveSettings, cancelSettings, resetPrefs, onFilePicked };
 
   // ---------- HOME ----------
   function renderHome(v) {
@@ -195,7 +201,7 @@
       </div>`).join('');
 
     return `
-    <section class="ns-screen" style="height:100%;overflow-y:auto;padding:0 0 116px;">
+    <section class="${v.screenAnim ? 'ns-screen' : ''}" style="height:100%;overflow-y:auto;padding:0 0 116px;">
       <header style="display:flex;align-items:center;justify-content:space-between;padding:26px 22px 10px;">
         <div>
           <div style="font:600 13px/1.2 'IBM Plex Sans Thai';color:#8a9890;letter-spacing:.2px;">${esc(v.greeting)}</div>
@@ -312,7 +318,7 @@
       </div>` : '';
 
     return `
-    <section class="ns-screen" style="height:100%;background:linear-gradient(180deg,#1b2420,#222e27);overflow:hidden;position:relative;display:flex;flex-direction:column;padding-bottom:108px;">
+    <section class="${v.screenAnim ? 'ns-screen' : ''}" style="height:100%;background:linear-gradient(180deg,#1b2420,#222e27);overflow:hidden;position:relative;display:flex;flex-direction:column;padding-bottom:108px;">
       <header style="display:flex;align-items:center;justify-content:space-between;padding:24px 22px 6px;position:relative;z-index:3;">
         <div style="display:flex;align-items:center;gap:9px;">
           <div style="width:34px;height:34px;border-radius:11px;background:var(--accent);display:flex;align-items:center;justify-content:center;font:800 13px 'Plus Jakarta Sans';color:#fff;">N</div>
@@ -346,15 +352,16 @@
       </div>
 
       <div style="display:flex;align-items:center;justify-content:center;gap:30px;z-index:3;margin:18px 26px 0;flex:none;">
-        <div style="width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;">
+        <input id="ns-file-input" type="file" accept="image/*" style="display:none;" onchange="__ns.onFilePicked(this)">
+        <button title="เลือกรูปจากแกลเลอรี" onclick="document.getElementById('ns-file-input').click()" style="width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#cdd6cf" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"></rect><circle cx="8.5" cy="8.5" r="1.6"></circle><path d="m21 15-5-5L5 21"></path></svg>
-        </div>
+        </button>
         <button onclick="__ns.onCapture()" style="width:72px;height:72px;border-radius:50%;border:5px solid rgba(255,255,255,.22);background:var(--accent);box-shadow:0 14px 34px -12px rgba(21,160,106,.9);cursor:pointer;display:flex;align-items:center;justify-content:center;">
           <span style="width:52px;height:52px;border-radius:50%;border:2px solid rgba(255,255,255,.6);"></span>
         </button>
-        <div style="width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;">
+        <button title="โหมดเล็งเต็มจอ" onclick="__ns.onCapture()" style="width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#cdd6cf" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"></path></svg>
-        </div>
+        </button>
       </div>
     </section>`;
   }
@@ -379,7 +386,7 @@
       </div>`).join('');
 
     return `
-    <section class="ns-screen" style="height:100%;overflow-y:auto;padding:0 0 120px;">
+    <section class="${v.screenAnim ? 'ns-screen' : ''}" style="height:100%;overflow-y:auto;padding:0 0 120px;">
       <header style="display:flex;align-items:center;justify-content:space-between;padding:24px 22px 8px;">
         <button onclick="__ns.go('scan')" style="width:42px;height:42px;border-radius:14px;background:#fff;border:1px solid #ece7da;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 16px -10px rgba(27,39,34,.3);">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1b2722" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
@@ -461,7 +468,7 @@
     }).join('');
 
     return `
-    <section class="ns-screen" style="height:100%;overflow-y:auto;padding:0 0 120px;">
+    <section class="${v.screenAnim ? 'ns-screen' : ''}" style="height:100%;overflow-y:auto;padding:0 0 120px;">
       <header style="display:flex;align-items:center;justify-content:space-between;padding:24px 22px 8px;">
         <button onclick="__ns.cancelSettings()" style="width:42px;height:42px;border-radius:14px;background:#fff;border:1px solid #ece7da;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 16px -10px rgba(27,39,34,.3);">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1b2722" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
@@ -619,6 +626,8 @@
 
   function render() {
     const v = compute();
+    v.screenAnim = (lastPage !== state.page);
+    lastPage = state.page;
     root.style.setProperty('--accent', v.accent);
     root.style.setProperty('--accent-soft', v.accentSoft);
 
