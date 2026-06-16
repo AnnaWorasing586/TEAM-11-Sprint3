@@ -58,19 +58,15 @@
     activeMode: 'food',
     servings: 1,
     resultFood: FOODS[0],
-    consumed: 960,
-    pConsumed: 62,
-    cConsumed: 132,
-    fConsumed: 38,
+    consumed: 0,
+    pConsumed: 0,
+    cConsumed: 0,
+    fConsumed: 0,
     accent: PREFS.accent ?? 'green',
     userName: PREFS.userName ?? 'พีรพล',
     dailyGoal: PREFS.dailyGoal ?? 2000,
     settingsDraft: null,
-    meals: [
-      { meal:'มื้อเช้า',    name:'โจ๊กหมูใส่ไข่',          kcal:300, time:'07:20', color:'#f5a524', tint:'#fdf2dd' },
-      { meal:'มื้อกลางวัน', name:'ข้าวผัดกะเพราไก่',        kcal:540, time:'12:10', color:'#ff8a5b', tint:'#ffeae0' },
-      { meal:'ของว่าง',    name:'นมถั่วเหลืองหวานน้อย', kcal:120, time:'15:30', color:'#4c8dff', tint:'#e6efff' },
-    ],
+    meals: [],
   };
 
   let scanTimer = null;
@@ -214,7 +210,7 @@
         <span style="font:600 11px 'IBM Plex Sans Thai';color:${d.labelColor};">${esc(d.d)}</span>
       </div>`).join('');
 
-    const mealsHtml = v.meals.map((meal) => `
+    const mealsHtml = v.meals.length ? v.meals.map((meal) => `
       <div style="display:flex;align-items:center;gap:13px;background:#fff;border:1px solid #efe9da;border-radius:18px;padding:12px 14px;box-shadow:0 12px 28px -28px rgba(27,39,34,.4);">
         <div style="width:46px;height:46px;border-radius:14px;flex:none;background:${meal.tint};display:flex;align-items:center;justify-content:center;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${meal.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18"></path><path d="M12 11V4"></path><path d="M7 21V11"></path><path d="M17 21V11"></path><path d="M5 21h14"></path></svg>
@@ -224,7 +220,11 @@
           <div style="font:500 12px 'IBM Plex Sans Thai';color:#8a9890;margin-top:2px;">${esc(meal.meal)} · ${esc(meal.time)}</div>
         </div>
         <div style="font:800 15px 'Plus Jakarta Sans';color:#1b2722;">${meal.kcal}<span style="font:600 10px 'IBM Plex Sans Thai';color:#a4afa7;"> kcal</span></div>
-      </div>`).join('');
+      </div>`).join('') : `
+      <div style="text-align:center;padding:24px 18px;background:#fff;border:1px dashed #d8d2c2;border-radius:18px;">
+        <div style="font:600 13px 'IBM Plex Sans Thai';color:#1b2722;">ยังไม่ได้บันทึกมื้ออาหาร</div>
+        <div style="font:500 12px 'IBM Plex Sans Thai';color:#8a9890;margin-top:4px;">กดปุ่ม "สแกน" ด้านล่างเพื่อเริ่มบันทึก</div>
+      </div>`;
 
     const bodyHtml = v.body.map((b) => `
       <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:15px;padding:11px 10px;">
@@ -310,15 +310,15 @@
         <div style="display:flex;align-items:center;justify-content:space-between;position:relative;">
           <div>
             <div style="font:600 12px 'IBM Plex Sans Thai';color:#aebfb4;">เป้าหมายของคุณ</div>
-            <div style="font:800 19px 'Plus Jakarta Sans','IBM Plex Sans Thai';margin-top:3px;">ลดน้ำหนัก · -0.5 กก./สัปดาห์</div>
+            <div style="font:800 19px 'Plus Jakarta Sans','IBM Plex Sans Thai';margin-top:3px;">ยังไม่ตั้งค่า</div>
           </div>
-          <div style="background:rgba(126,208,168,.18);color:#9fe3bf;font:700 11px 'IBM Plex Sans Thai';padding:7px 12px;border-radius:999px;">กำลังไปได้สวย</div>
+          <div style="background:rgba(126,208,168,.18);color:#9fe3bf;font:700 11px 'IBM Plex Sans Thai';padding:7px 12px;border-radius:999px;">เริ่มกันเลย</div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px;position:relative;">
           ${bodyHtml}
         </div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:14px;font:500 11.5px 'IBM Plex Sans Thai';color:#9fe3bf;position:relative;">
-          <span style="width:6px;height:6px;border-radius:50%;background:#9fe3bf;"></span>AI คำนวณ TDEE จากร่างกายของคุณแล้วตั้งเป้าให้อัตโนมัติ
+          <span style="width:6px;height:6px;border-radius:50%;background:#9fe3bf;"></span>กรอกข้อมูลร่างกายเพื่อให้ AI ช่วยคำนวณเป้าหมายให้คุณ
         </div>
       </div>
     </section>`;
@@ -587,7 +587,7 @@
     ].map((m) => ({ ...m, pct: Math.min(100, Math.round(m.v / m.g * 100)) }));
 
     const wd = ['อา','จ','อ','พ','พฤ','ศ'];
-    const wbase = [1620, 1980, 1740, 2120, 1850, 1760];
+    const wbase = [0, 0, 0, 0, 0, 0];
     const scaleMax = Math.max(goal, 2300);
     const week = wbase.map((v,i) => ({ d:wd[i], val:v })).concat([{ d:'ส', val:consumed }]).map((w,i) => {
       const today = i === 6;
@@ -602,10 +602,10 @@
     const weekAvg = nf(Math.round((wbase.reduce((a,b) => a+b, 0) + consumed) / 7));
 
     const body = [
-      { v:'2,000', k:'TDEE kcal' },
-      { v:'62',    k:'น้ำหนัก กก.' },
-      { v:'168',   k:'ส่วนสูง ซม.' },
-      { v:'22.0',  k:'BMI' },
+      { v:'—', k:'TDEE kcal' },
+      { v:'—', k:'น้ำหนัก กก.' },
+      { v:'—', k:'ส่วนสูง ซม.' },
+      { v:'—', k:'BMI' },
     ];
 
     const modeMeta = {
