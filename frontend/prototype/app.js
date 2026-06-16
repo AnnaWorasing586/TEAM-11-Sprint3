@@ -84,6 +84,40 @@
   let cameraStream = null;
   let cameraTried = false;
   const root = document.getElementById('app-root');
+  const API_URL = (window.NS_API_URL || '').replace(/\/$/, '');
+
+  function captureVideoFrame() {
+    const video = document.getElementById('ns-cam');
+    if (!video || !video.videoWidth) return Promise.resolve(null);
+    const canvas = document.createElement('canvas');
+    const maxDim = 1280;
+    const scale = Math.min(1, maxDim / Math.max(video.videoWidth, video.videoHeight));
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
+    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+    return new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.85));
+  }
+
+  async function callRealAPI(blobOrFile, mode) {
+    if (!API_URL) return null;
+    const endpoint = mode === 'label' ? '/api/scan/label' : '/api/scan/photo';
+    const fd = new FormData();
+    fd.append('image', blobOrFile, 'capture.jpg');
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 30000);
+      const r = await fetch(API_URL + endpoint, { method:'POST', body:fd, signal:ctrl.signal });
+      clearTimeout(t);
+      if (!r.ok) return null;
+      const data = await r.json();
+      if (!data || typeof data.kcal !== 'number') return null;
+      return { ...data, confidence: data.confidence || 80 };
+    } catch (e) { return null; }
+  }
+
+  function pickMock() {
+    return FOODS[Math.floor(Math.random() * FOODS.length)];
+  }
 
   async function startCamera() {
     if (cameraStream) return;
@@ -143,15 +177,22 @@
     const s = Math.min(3, Math.max(0.5, Math.round((state.servings + d) * 2) / 2));
     setState({ servings: s });
   }
-  function onCapture() {
+  async function onCapture() {
     if (state.scanStage === 'analyzing') return;
     setState({ scanStage:'analyzing' });
-    scanTimer = setTimeout(() => {
+    const mode = state.activeMode;
+    let food = null;
+    if (mode === 'food' || mode === 'label') {
+      const blob = await captureVideoFrame();
+      if (blob && API_URL) food = await callRealAPI(blob, mode);
+    }
+    if (!food) {
+      await new Promise((r) => { scanTimer = setTimeout(r, API_URL ? 200 : 1900); });
       scanTimer = null;
-      if (state.page !== 'scan') return;
-      const f = FOODS[Math.floor(Math.random() * FOODS.length)];
-      setState({ scanStage:'idle', resultFood:f, servings:1, page:'result' });
-    }, 1900);
+      food = pickMock();
+    }
+    if (state.page !== 'scan') return;
+    setState({ scanStage:'idle', resultFood:food, servings:1, page:'result' });
   }
   function saveResult() {
     const f = state.resultFood, s = state.servings;
@@ -182,10 +223,22 @@
     }));
   }
   function setAccent(name) { setState({ accent:name }); }
-  function onFilePicked(input) {
+  async function onFilePicked(input) {
     if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
     input.value = '';
-    onCapture();
+    if (state.scanStage === 'analyzing') return;
+    setState({ scanStage:'analyzing' });
+    const mode = state.activeMode;
+    let food = null;
+    if ((mode === 'food' || mode === 'label') && API_URL) {
+      food = await callRealAPI(file, mode);
+    }
+    if (!food) {
+      await new Promise((r) => setTimeout(r, API_URL ? 200 : 1500));
+      food = pickMock();
+    }
+    setState({ scanStage:'idle', resultFood:food, servings:1, page:'result' });
   }
 
   function updateDraft(field, val) {

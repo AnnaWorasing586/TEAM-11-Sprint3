@@ -1,62 +1,115 @@
-# Backend Prototype — Mock Data
+# Backend Prototype — Claude Vision API
 
-ยังไม่มี server จริงสำหรับ prototype — มีแค่ **mock data** ให้ backend dev ใช้เป็นจุดเริ่ม schema และทดสอบ frontend
+FastAPI backend ที่ frontend prototype เรียกตอนกดสแกน
+รัน Claude Vision วิเคราะห์รูปอาหาร/ฉลาก + OpenFoodFacts สำหรับบาร์โค้ด
 
 ## ไฟล์
 
 | ไฟล์ | หน้าที่ |
 |---|---|
-| `foods.json` | ฐานข้อมูล mock 20 รายการอาหาร — schema เดียวกับที่ frontend prototype ใช้ |
+| `server.py` | FastAPI app · 3 endpoints |
+| `requirements.txt` | dependencies (FastAPI, anthropic, httpx ฯลฯ) |
+| `foods.json` | mock 20 รายการอาหาร (สำหรับทดสอบ frontend แบบไม่มี backend) |
 
-## Schema
+## Endpoints
+
+| URL | Input | Output |
+|---|---|---|
+| `GET /` | — | สถานะ service + รุ่น Claude ที่ใช้ |
+| `GET /health` | — | `{ "ok": true }` |
+| `POST /api/scan/photo` | `image` (multipart, JPEG/PNG ≤6MB) | `Food` JSON |
+| `POST /api/scan/label` | `image` (multipart) | `Food` JSON · อ่านค่าตามฉลาก |
+| `POST /api/scan/barcode` | `{"barcode": "8851234567890"}` | `Food` JSON · ดึงจาก OpenFoodFacts |
+
+## Food schema
 
 ```json
 {
   "name":       "ข้าวผัดกะเพราไก่ไข่ดาว",
   "tag":        "จานเดียว · 1 จาน",
   "kcal":       620,
-  "protein":    28,      // g
-  "carbs":      68,      // g
-  "fat":        26,      // g
-  "sugar":      6,       // g
-  "sodium":     980,     // mg
-  "confidence": 94       // % AI confidence (0-100)
+  "protein":    28,
+  "carbs":      68,
+  "fat":        26,
+  "sugar":      6,
+  "sodium":     980,
+  "confidence": 94
 }
 ```
 
-## ที่ backend จริงต้องทำต่อ
+## ขั้นตอน Deploy บน Render
 
-3 เส้นทาง endpoint ที่ frontend จะเรียก (ตอนนี้ prototype สุ่มจาก mock data แทน):
+### 1. รับ Anthropic API key
 
-| Endpoint | Input | Output |
-|---|---|---|
-| `POST /api/scan/photo` | รูปภาพอาหาร (multipart — จากกล้องหรือแกลเลอรี) | `Food` object ตาม schema ด้านบน |
-| `POST /api/scan/barcode` | `{ "barcode": "8851234567890" }` | `Food` object |
-| `POST /api/scan/label` | รูปฉลากโภชนาการ (multipart) | `Food` object — `name` อาจเป็น `"ผลิตภัณฑ์ที่สแกน"` ถ้า OCR ไม่เจอชื่อแบรนด์ |
+1. ไปที่ https://console.anthropic.com → สมัครบัญชี (ใช้ Google login ก็ได้)
+2. เมนูซ้าย → **Billing** → เติมเงินขั้นต่ำ $5 (พอใช้สแกนได้หลายร้อยรูป)
+3. เมนูซ้าย → **API Keys** → **Create Key** → ตั้งชื่อ `nutriscan-prototype` → **Copy** เก็บไว้ (จะเห็นแค่ครั้งเดียว)
 
-ที่ backend จริง ๆ จะต่อ external API:
+### 2. สร้าง Render Web Service
 
-| งาน | บริการแนะนำ |
+ที่ https://dashboard.render.com:
+
+1. **+ New** → **Web Service**
+2. เลือก repo `AnnaWorasing586/TEAM-11-Sprint3`
+3. กรอกค่าตามตาราง:
+
+| ช่อง | ค่า |
 |---|---|
-| รูปอาหาร | LogMeal Food AI / Nutritionix Image API / Claude Vision |
-| บาร์โค้ด | Open Food Facts (ฟรี ไม่ต้อง key) — `https://world.openfoodfacts.org/api/v2/product/{barcode}.json` |
-| ฉลาก OCR | CRAFT (text detection — มีโมเดลแล้วใน `backend/craft_mlt_25k.pth`) + Google Cloud Vision / AWS Textract สำหรับ OCR / หรือใช้ Claude Vision ส่งรูปฉลากแล้ว parse ค่าโภชนาการเป็น JSON ตรง ๆ |
+| **Name** | `nutriscan-api` |
+| **Branch** | `feature/web-prototype-scan-result` |
+| **Root Directory** | `backend/prototype` |
+| **Runtime** | `Python 3` |
+| **Build Command** | `pip install -r requirements.txt` |
+| **Start Command** | `uvicorn server:app --host 0.0.0.0 --port $PORT` |
+| **Instance Type** | `Free` |
 
-## หมายเหตุเรื่องโหมดฉลาก
+4. ในส่วน **Environment Variables** เพิ่ม:
 
-ฉลากโภชนาการบอก **ค่าสารอาหาร** แต่ไม่ได้บอกชื่อเมนู ดังนั้นในทาง implementation มี 2 ทางเลือก:
+| Key | Value |
+|---|---|
+| `ANTHROPIC_API_KEY` | (คีย์ที่ copy จากขั้นตอน 1) |
+| `CLAUDE_MODEL` | `claude-sonnet-4-6` (default ก็ได้) |
 
-1. **OCR เฉพาะตาราง** → คืนค่าโภชนาการ + ตั้งชื่อเป็น `"ผลิตภัณฑ์ที่สแกน"` หรือให้ user พิมพ์ชื่อเอง
-2. **OCR ทั้งบรรจุภัณฑ์** → อ่านทั้งชื่อแบรนด์ + ตารางโภชนาการ → แม่นกว่าแต่ซับซ้อนกว่า
+5. กด **Create Web Service** → รอ ~3-5 นาที deploy
+6. เสร็จแล้วได้ URL เช่น `https://nutriscan-api.onrender.com`
+7. ลองเปิด `https://nutriscan-api.onrender.com/` ในเบราว์เซอร์ — ควรเห็น JSON `{"service": "...", "has_api_key": true}`
 
-ใน prototype สุ่ม mock data ทุกโหมด ดังนั้นชื่อจะไม่ตรงกับฉลากจริง — เป็นข้อจำกัดที่จะหายไปเมื่อต่อ backend จริง
+### 3. ต่อ frontend เข้ากับ backend
+
+แก้ไฟล์ `frontend/prototype/index.html` บรรทัด:
+
+```html
+window.NS_API_URL = '';
+```
+
+เปลี่ยนเป็น:
+
+```html
+window.NS_API_URL = 'https://nutriscan-api.onrender.com';
+```
+
+commit + push → Render frontend จะ redeploy เอง → กดสแกน → ได้ผลจาก Claude จริง
+
+## ค่าใช้จ่าย
+
+- **Render Web Service Free tier:** ฟรี 750 ชม./เดือน · cold start ~30s หลัง idle 15 นาที (กดสแกนครั้งแรกหลังพักจะช้าหน่อย)
+- **Anthropic Claude Sonnet 4.6:** ราว ~$0.005 ต่อรูป — เติม $5 ใช้ได้ ~1,000 รูป
+- **OpenFoodFacts:** ฟรี ไม่มีโควต้า
 
 ## โหมดที่ตัดออกจาก scope
 
 - **โหมดแกลเลอรี (chip):** ตัดออกเพราะซ้ำกับปุ่มอัปโหลดรูปภาพข้างปุ่มถ่าย ทั้งสองทำสิ่งเดียวกัน
 
-## คำเตือน
+## รัน local (สำหรับ dev)
 
-- อย่าใส่ API key ใน frontend — wrap ไว้ใน backend เสมอ
-- Cache ผล AI ตาม hash ของรูปเพื่อประหยัด quota
-- ถ้า confidence < 70% ให้ส่ง flag กลับ frontend ให้ user ยืนยันก่อนบันทึก
+```bash
+cd backend/prototype
+python -m venv .venv
+.venv\Scripts\activate          # Windows
+# source .venv/bin/activate     # macOS/Linux
+pip install -r requirements.txt
+export ANTHROPIC_API_KEY=sk-ant-...
+uvicorn server:app --reload --port 8000
+```
+
+เปิด http://localhost:8000 ดูสถานะ
