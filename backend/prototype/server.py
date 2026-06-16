@@ -5,9 +5,10 @@
   POST /api/scan/label    — image upload (nutrition label), returns Food JSON
   POST /api/scan/barcode  — JSON {barcode}, returns Food JSON via OpenFoodFacts
 
-Set ANTHROPIC_API_KEY env var on Render before first request, otherwise
-photo/label endpoints will 503. Barcode works without a key (uses
-OpenFoodFacts public API).
+Auto-picks the vision provider based on which env var is set:
+  - GEMINI_API_KEY        → Gemini (default · free tier 1500 req/day)
+  - ANTHROPIC_API_KEY     → Claude (paid)
+  - neither               → photo/label endpoints 503; barcode still works
 """
 
 from __future__ import annotations
@@ -24,12 +25,25 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 try:
+    import google.generativeai as genai
+except ImportError:
+    genai = None
+try:
     import anthropic
 except ImportError:
     anthropic = None
 
-MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
 MAX_IMAGE_BYTES = 6 * 1024 * 1024
+
+
+def active_provider() -> str:
+    if os.getenv("GEMINI_API_KEY"):
+        return "gemini"
+    if os.getenv("ANTHROPIC_API_KEY"):
+        return "anthropic"
+    return ""
 
 app = FastAPI(title="NutriScan AI Prototype Backend")
 app.add_middleware(
@@ -38,18 +52,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-def get_client() -> "anthropic.Anthropic":
-    key = os.getenv("ANTHROPIC_API_KEY")
-    if not key:
-        raise HTTPException(
-            status_code=503,
-            detail="ANTHROPIC_API_KEY env var ยังไม่ได้ตั้งค่าบน Render — ดู README",
-        )
-    if anthropic is None:
-        raise HTTPException(status_code=503, detail="anthropic SDK not installed")
-    return anthropic.Anthropic(api_key=key)
 
 
 SCHEMA = """ตอบเป็น JSON เท่านั้น (ไม่มี markdown / ข้อความอื่น) ตาม schema นี้:
@@ -97,14 +99,14 @@ def normalize_food(raw: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-async def claude_vision(image_bytes: bytes, instruction: str) -> dict[str, Any]:
-    if len(image_bytes) > MAX_IMAGE_BYTES:
-        raise HTTPException(status_code=413, detail="image too large")
-    client = get_client()
+def _claude_call(image_bytes: bytes, prompt: str) -> str:
+    if anthropic is None:
+        raise HTTPException(status_code=503, detail="anthropic SDK not installed")
+    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
     img_b64 = base64.b64encode(image_bytes).decode("ascii")
     try:
         msg = client.messages.create(
-            model=MODEL,
+            model=CLAUDE_MODEL,
             max_tokens=1024,
             messages=[
                 {
@@ -118,14 +120,44 @@ async def claude_vision(image_bytes: bytes, instruction: str) -> dict[str, Any]:
                                 "data": img_b64,
                             },
                         },
-                        {"type": "text", "text": f"{instruction}\n\n{SCHEMA}"},
+                        {"type": "text", "text": prompt},
                     ],
                 }
             ],
         )
     except anthropic.APIError as exc:
         raise HTTPException(status_code=502, detail=f"Claude API error: {exc}")
-    text = msg.content[0].text if msg.content else ""
+    return msg.content[0].text if msg.content else ""
+
+
+def _gemini_call(image_bytes: bytes, prompt: str) -> str:
+    if genai is None:
+        raise HTTPException(status_code=503, detail="google-generativeai SDK not installed")
+    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+    model = genai.GenerativeModel(GEMINI_MODEL)
+    try:
+        resp = model.generate_content(
+            [
+                {"mime_type": "image/jpeg", "data": image_bytes},
+                prompt,
+            ]
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Gemini API error: {exc}")
+    return resp.text or ""
+
+
+async def vision_scan(image_bytes: bytes, instruction: str) -> dict[str, Any]:
+    if len(image_bytes) > MAX_IMAGE_BYTES:
+        raise HTTPException(status_code=413, detail="image too large")
+    provider = active_provider()
+    if not provider:
+        raise HTTPException(
+            status_code=503,
+            detail="ตั้ง GEMINI_API_KEY หรือ ANTHROPIC_API_KEY ใน env ก่อน — ดู README",
+        )
+    prompt = f"{instruction}\n\n{SCHEMA}"
+    text = _gemini_call(image_bytes, prompt) if provider == "gemini" else _claude_call(image_bytes, prompt)
     try:
         raw = extract_json(text)
     except (ValueError, json.JSONDecodeError) as exc:
@@ -135,11 +167,12 @@ async def claude_vision(image_bytes: bytes, instruction: str) -> dict[str, Any]:
 
 @app.get("/")
 def root():
+    provider = active_provider()
     return {
         "service": "NutriScan AI Prototype Backend",
-        "model": MODEL,
+        "provider": provider or "none (set GEMINI_API_KEY or ANTHROPIC_API_KEY)",
+        "model": GEMINI_MODEL if provider == "gemini" else CLAUDE_MODEL if provider == "anthropic" else None,
         "endpoints": ["/api/scan/photo", "/api/scan/label", "/api/scan/barcode"],
-        "has_api_key": bool(os.getenv("ANTHROPIC_API_KEY")),
     }
 
 
@@ -151,7 +184,7 @@ def health():
 @app.post("/api/scan/photo")
 async def scan_photo(image: UploadFile = File(...)):
     data = await image.read()
-    return await claude_vision(
+    return await vision_scan(
         data,
         "วิเคราะห์อาหารในรูปนี้ ระบุชื่อเมนูภาษาไทย และประมาณการค่าโภชนาการต่อ 1 หน่วยบริโภค",
     )
@@ -160,7 +193,7 @@ async def scan_photo(image: UploadFile = File(...)):
 @app.post("/api/scan/label")
 async def scan_label(image: UploadFile = File(...)):
     data = await image.read()
-    return await claude_vision(
+    return await vision_scan(
         data,
         "อ่านข้อมูลโภชนาการจากฉลากในรูปนี้ ใช้ค่าตามที่ระบุในฉลากต่อ 1 หน่วยบริโภค "
         "ถ้ามีชื่อผลิตภัณฑ์/แบรนด์ในรูป ใส่เป็น name ถ้าไม่มี ใส่ 'ผลิตภัณฑ์ที่สแกน'",
