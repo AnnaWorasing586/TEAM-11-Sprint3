@@ -27,9 +27,12 @@
 
 <script>
   // ตั้งค่า URL ของ backend ที่ deploy บน Render
-  // ถ้าเว้นว่าง — prototype จะ fallback เป็น mock data (สุ่ม)
-  // ถ้าใส่ URL — frontend จะส่งรูปไปวิเคราะห์ด้วย Gemini/Claude Vision จริง
   window.NS_API_URL = 'https://nutriscan-api-lpmx.onrender.com';
+
+  // Supabase config — anon/publishable key ปลอดภัยที่ใส่ใน frontend
+  // (RLS policy ใน DB คุมการเข้าถึงข้อมูลแยกตาม user)
+  window.NS_SUPABASE_URL = 'https://eivyyjtfynivlztabmtv.supabase.co';
+  window.NS_SUPABASE_KEY = 'sb_publishable_lI0OIgdtFnXeo_XUH9NXYg_eHInyTLV';
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -38,6 +41,7 @@
   }
 </script>
 <script src="https://unpkg.com/@zxing/browser@0.1.4/umd/zxing-browser.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="app.js"></script>
 </body>
 </html>

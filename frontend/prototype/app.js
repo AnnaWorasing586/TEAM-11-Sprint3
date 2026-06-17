@@ -105,6 +105,24 @@
   const DAY = loadDay() || {};
   const STATS = loadStats();
 
+  // ============================================
+  // Supabase client (optional — works locally if not configured)
+  // ============================================
+  const SB_URL = window.NS_SUPABASE_URL || '';
+  const SB_KEY = window.NS_SUPABASE_KEY || '';
+  let supabase = null;
+  function initSupabase() {
+    if (supabase) return supabase;
+    if (!SB_URL || !SB_KEY) return null;
+    if (!window.supabase || !window.supabase.createClient) return null;
+    try {
+      supabase = window.supabase.createClient(SB_URL, SB_KEY, {
+        auth: { persistSession: true, autoRefreshToken: true, storage: localStorage },
+      });
+      return supabase;
+    } catch (e) { return null; }
+  }
+
   const state = {
     page: 'home',
     scanStage: 'idle',
@@ -134,6 +152,13 @@
     history: STATS.history || [],
     toast: null,
     meals: DAY.meals || [],
+    user: null,
+    authBusy: false,
+    authError: null,
+    authEmail: '',
+    authPassword: '',
+    authMode: 'login',
+    syncing: false,
   };
 
   let scanTimer = null;
@@ -243,14 +268,17 @@
     const prev = {};
     PREF_KEYS.concat(DAY_KEYS, STAT_KEYS).forEach((k) => { prev[k] = state[k]; });
     Object.assign(state, typeof patch === 'function' ? patch(state) : patch);
-    if (PREF_KEYS.some((k) => prev[k] !== state[k])) savePrefs(state);
+    const prefsChanged = PREF_KEYS.some((k) => prev[k] !== state[k]);
+    const statsChanged = STAT_KEYS.some((k) => prev[k] !== state[k]);
+    if (prefsChanged) savePrefs(state);
     if (DAY_KEYS.some((k) => prev[k] !== state[k])) saveDay(state);
-    if (STAT_KEYS.some((k) => prev[k] !== state[k])) {
+    if (statsChanged) {
       saveStats({
         streak: state.streak, lastLogDate: state.lastLogDate,
         badges: state.badges, totalScans: state.totalScans, history: state.history,
       });
     }
+    if ((prefsChanged || statsChanged) && state.user) schedulePush();
     render();
   }
 
@@ -264,6 +292,7 @@
   function addWater(ml) {
     const w = Math.max(0, Math.min(5000, (state.water || 0) + ml));
     setState({ water: w });
+    if (state.user) pushWaterToCloud(ml);
   }
   function resetWater() { setState({ water: 0 }); }
 
@@ -304,6 +333,215 @@
     }
     setState({ streak: newStreak, lastLogDate: t });
   }
+
+  // ============================================
+  // Cloud sync (Supabase)
+  // ============================================
+  let cloudPushTimer = null;
+  let lastCloudPushKey = '';
+
+  async function pullFromCloud() {
+    const sb = initSupabase();
+    if (!sb || !state.user) return;
+    setState({ syncing: true });
+    try {
+      const uid = state.user.id;
+      const today_ = today();
+      const [profileR, mealsR, waterR, badgesR, statsR] = await Promise.all([
+        sb.from('profiles').select('*').eq('user_id', uid).maybeSingle(),
+        sb.from('meals').select('*').eq('user_id', uid).eq('log_date', today_).order('created_at', { ascending: false }),
+        sb.from('water_logs').select('amount_ml').eq('user_id', uid).eq('log_date', today_),
+        sb.from('user_badges').select('badge_id, earned_at').eq('user_id', uid),
+        sb.from('user_stats').select('*').eq('user_id', uid).maybeSingle(),
+      ]);
+
+      const patch = {};
+      if (profileR.data) {
+        const p = profileR.data;
+        if (p.user_name)  patch.userName = p.user_name;
+        if (Number.isFinite(p.daily_goal)) patch.dailyGoal = p.daily_goal;
+        if (p.accent && ACCENTS[p.accent]) patch.accent = p.accent;
+        if (Number.isFinite(p.weight)) patch.weight = Number(p.weight);
+        if (Number.isFinite(p.height)) patch.height = Number(p.height);
+        if (typeof p.body_goal === 'string') patch.bodyGoal = p.body_goal;
+        if (typeof p.dark_mode === 'boolean') patch.darkMode = p.dark_mode;
+      }
+      if (mealsR.data) {
+        const meals = mealsR.data.map((m) => ({
+          id: m.id, meal: m.meal_type || 'มื้อ', name: m.name, kcal: m.kcal,
+          time: new Date(m.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+          color: '#15a06a', tint: '#e3f4ea',
+          protein: m.protein, carbs: m.carbs, fat: m.fat,
+        }));
+        patch.meals = meals;
+        patch.consumed  = meals.reduce((a, m) => a + (m.kcal || 0), 0);
+        patch.pConsumed = meals.reduce((a, m) => a + (m.protein || 0), 0);
+        patch.cConsumed = meals.reduce((a, m) => a + (m.carbs || 0), 0);
+        patch.fConsumed = meals.reduce((a, m) => a + (m.fat || 0), 0);
+      }
+      if (waterR.data) patch.water = waterR.data.reduce((a, w) => a + (w.amount_ml || 0), 0);
+      if (badgesR.data) {
+        const badges = {};
+        badgesR.data.forEach((b) => { badges[b.badge_id] = b.earned_at; });
+        patch.badges = badges;
+      }
+      if (statsR.data) {
+        patch.streak = statsR.data.streak || 0;
+        patch.lastLogDate = statsR.data.last_log_date || null;
+        patch.totalScans = statsR.data.total_scans || 0;
+      }
+      setState({ ...patch, syncing: false });
+      showToast('โหลดข้อมูลจาก cloud แล้ว', 'success');
+    } catch (e) {
+      setState({ syncing: false });
+      showToast('โหลดจาก cloud ไม่สำเร็จ', 'info');
+    }
+  }
+
+  function schedulePush() {
+    if (!state.user || !initSupabase()) return;
+    if (cloudPushTimer) clearTimeout(cloudPushTimer);
+    cloudPushTimer = setTimeout(pushToCloud, 1500);
+  }
+
+  async function pushToCloud() {
+    const sb = initSupabase();
+    if (!sb || !state.user) return;
+    const uid = state.user.id;
+    const key = JSON.stringify([state.userName, state.dailyGoal, state.accent, state.weight, state.height, state.bodyGoal, state.darkMode, state.streak, state.lastLogDate, state.totalScans, Object.keys(state.badges).sort()]);
+    if (key === lastCloudPushKey) return;
+    lastCloudPushKey = key;
+    try {
+      await sb.from('profiles').upsert({
+        user_id: uid,
+        user_name: state.userName,
+        daily_goal: state.dailyGoal,
+        accent: state.accent,
+        weight: state.weight,
+        height: state.height,
+        body_goal: state.bodyGoal,
+        dark_mode: state.darkMode,
+        updated_at: new Date().toISOString(),
+      });
+      await sb.from('user_stats').upsert({
+        user_id: uid,
+        streak: state.streak,
+        last_log_date: state.lastLogDate,
+        total_scans: state.totalScans,
+        updated_at: new Date().toISOString(),
+      });
+      const badgeRows = Object.entries(state.badges).map(([badge_id, earned_at]) => ({ user_id: uid, badge_id, earned_at }));
+      if (badgeRows.length) await sb.from('user_badges').upsert(badgeRows);
+    } catch (e) {}
+  }
+
+  async function pushMealToCloud(meal) {
+    const sb = initSupabase();
+    if (!sb || !state.user) return;
+    try {
+      const { data } = await sb.from('meals').insert({
+        user_id: state.user.id,
+        log_date: today(),
+        meal_type: meal.meal,
+        name: meal.name,
+        kcal: meal.kcal,
+        protein: meal.protein,
+        carbs: meal.carbs,
+        fat: meal.fat,
+      }).select().single();
+      if (data && data.id) {
+        const meals = state.meals.map((m) => m === meal ? { ...m, id: data.id } : m);
+        state.meals = meals;
+      }
+    } catch (e) {}
+  }
+
+  async function deleteMealFromCloud(id) {
+    const sb = initSupabase();
+    if (!sb || !state.user) return;
+    try { await sb.from('meals').delete().eq('id', id); } catch (e) {}
+  }
+
+  async function pushWaterToCloud(delta) {
+    const sb = initSupabase();
+    if (!sb || !state.user || !delta) return;
+    try {
+      await sb.from('water_logs').insert({
+        user_id: state.user.id,
+        log_date: today(),
+        amount_ml: delta,
+      });
+    } catch (e) {}
+  }
+
+  // ============================================
+  // Auth
+  // ============================================
+  async function authSignUp() {
+    const sb = initSupabase();
+    if (!sb) { setState({ authError: 'ไม่ได้ตั้งค่า Supabase' }); return; }
+    if (!state.authEmail || !state.authPassword) { setState({ authError: 'กรอกอีเมลและรหัสผ่าน' }); return; }
+    setState({ authBusy: true, authError: null });
+    try {
+      const { data, error } = await sb.auth.signUp({ email: state.authEmail, password: state.authPassword });
+      if (error) { setState({ authBusy: false, authError: error.message }); return; }
+      setState({ authBusy: false, authEmail: '', authPassword: '' });
+      if (data.session) {
+        setState({ user: { id: data.user.id, email: data.user.email } });
+        await migrateLocalToCloud();
+        await pullFromCloud();
+      } else {
+        showToast('สมัครสำเร็จ — กรุณาเช็คอีเมลเพื่อยืนยัน', 'success');
+      }
+    } catch (e) { setState({ authBusy: false, authError: 'สมัครไม่สำเร็จ' }); }
+  }
+
+  async function authSignIn() {
+    const sb = initSupabase();
+    if (!sb) { setState({ authError: 'ไม่ได้ตั้งค่า Supabase' }); return; }
+    if (!state.authEmail || !state.authPassword) { setState({ authError: 'กรอกอีเมลและรหัสผ่าน' }); return; }
+    setState({ authBusy: true, authError: null });
+    try {
+      const { data, error } = await sb.auth.signInWithPassword({ email: state.authEmail, password: state.authPassword });
+      if (error) { setState({ authBusy: false, authError: error.message }); return; }
+      setState({ authBusy: false, authEmail: '', authPassword: '', user: { id: data.user.id, email: data.user.email } });
+      showToast('เข้าสู่ระบบสำเร็จ', 'success');
+      await pullFromCloud();
+    } catch (e) { setState({ authBusy: false, authError: 'เข้าสู่ระบบไม่สำเร็จ' }); }
+  }
+
+  async function authSignOut() {
+    const sb = initSupabase();
+    if (!sb) return;
+    try { await sb.auth.signOut(); } catch (e) {}
+    setState({ user: null });
+    showToast('ออกจากระบบแล้ว — ข้อมูลในเครื่องยังอยู่', 'info');
+  }
+
+  async function migrateLocalToCloud() {
+    const sb = initSupabase();
+    if (!sb || !state.user) return;
+    const uid = state.user.id;
+    try {
+      if (state.meals.length) {
+        const rows = state.meals.map((m) => ({
+          user_id: uid, log_date: today(),
+          meal_type: m.meal, name: m.name,
+          kcal: m.kcal || 0, protein: m.protein || 0,
+          carbs: m.carbs || 0, fat: m.fat || 0,
+        }));
+        await sb.from('meals').insert(rows);
+      }
+      if (state.water > 0) {
+        await sb.from('water_logs').insert({ user_id: uid, log_date: today(), amount_ml: state.water });
+      }
+      await pushToCloud();
+    } catch (e) {}
+  }
+
+  function setAuthEmail(v)    { setState({ authEmail: String(v).slice(0, 100) }); }
+  function setAuthPassword(v) { setState({ authPassword: String(v).slice(0, 100) }); }
+  function setAuthMode(m)     { setState({ authMode: m, authError: null }); }
 
   function downloadCSV() {
     const header = 'date,meal,name,kcal,protein,carbs,fat';
@@ -395,6 +633,7 @@
     updateStreakOnLog();
     pushHistory(kcal);
     checkBadges();
+    if (state.user) pushMealToCloud(meal);
   }
 
   function pushHistory(kcal) {
@@ -427,6 +666,7 @@
       cConsumed: Math.max(0, st.cConsumed - (meal.carbs   || 0)),
       fConsumed: Math.max(0, st.fConsumed - (meal.fat     || 0)),
     }));
+    if (state.user) deleteMealFromCloud(id);
   }
   function dismissToast() { setState({ toast: null }); }
   function setAccent(name) { setState({ accent:name }); }
@@ -501,6 +741,8 @@
     addWater, resetWater,
     openSearch, closeSearch, updateSearchQuery, pickFromSearch,
     toggleDarkMode, downloadCSV, dismissToast,
+    authSignUp, authSignIn, authSignOut, setAuthEmail, setAuthPassword, setAuthMode,
+    pullFromCloud,
   };
 
   // ---------- HOME ----------
@@ -856,6 +1098,57 @@
     </section>`;
   }
 
+  // ---------- AUTH CARD (in Settings) ----------
+  function renderAuthCard(v) {
+    if (!SB_URL || !SB_KEY) return '';
+    if (v.user) {
+      return `
+      <div style="margin:14px 18px 0;background:linear-gradient(150deg,#1f2b24,#2c3a30);border-radius:24px;padding:20px;color:#fff;box-shadow:0 22px 46px -30px rgba(27,39,34,.6);">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:46px;height:46px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font:800 18px 'Plus Jakarta Sans';color:#fff;flex:none;">${esc((v.user.email || 'U').charAt(0).toUpperCase())}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font:600 12px 'IBM Plex Sans Thai';color:#9fe3bf;">เข้าสู่ระบบแล้ว</div>
+            <div style="font:700 14px 'Plus Jakarta Sans';color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${esc(v.user.email)}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:14px;font:500 11.5px 'IBM Plex Sans Thai';color:#9fe3bf;">
+          <span style="width:6px;height:6px;border-radius:50%;background:#9fe3bf;"></span>${v.syncing ? 'กำลัง sync...' : 'ข้อมูลถูก sync ขึ้น cloud แบบอัตโนมัติ'}
+        </div>
+        <div style="display:flex;gap:9px;margin-top:14px;">
+          <button onclick="__ns.pullFromCloud()" style="flex:1;padding:11px 0;border-radius:13px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#9fe3bf;font:700 12.5px 'IBM Plex Sans Thai';cursor:pointer;">↻ โหลดใหม่</button>
+          <button onclick="__ns.authSignOut()" style="flex:1;padding:11px 0;border-radius:13px;border:1px solid rgba(255,170,120,.3);background:rgba(255,170,120,.1);color:#ffaa78;font:700 12.5px 'IBM Plex Sans Thai';cursor:pointer;">ออกจากระบบ</button>
+        </div>
+      </div>`;
+    }
+    const mode = v.authMode || 'login';
+    return `
+    <div style="margin:14px 18px 0;background:linear-gradient(165deg,#fff,#fbfaf5);border:1px solid #efe9da;border-radius:24px;padding:20px;box-shadow:0 18px 40px -36px rgba(27,39,34,.4);">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:6px;">
+        <span style="font-size:18px;">☁️</span>
+        <div style="font:700 14px 'IBM Plex Sans Thai';color:#1b2722;">Sync ข้ามอุปกรณ์ (Cloud)</div>
+      </div>
+      <div style="font:500 12px/1.5 'IBM Plex Sans Thai';color:#8a9890;margin-bottom:14px;">Login เพื่อ sync ข้อมูลข้ามอุปกรณ์ — เปลี่ยนเครื่องใหม่ login → ข้อมูลตามไปด้วย</div>
+
+      <div style="display:flex;gap:6px;background:#f0eadc;padding:4px;border-radius:12px;margin-bottom:14px;">
+        <button onclick="__ns.setAuthMode('login')" style="flex:1;padding:8px;border-radius:9px;border:none;background:${mode === 'login' ? '#fff' : 'transparent'};font:700 12.5px 'IBM Plex Sans Thai';color:${mode === 'login' ? '#1b2722' : '#8a9890'};cursor:pointer;box-shadow:${mode === 'login' ? '0 2px 6px rgba(0,0,0,.06)' : 'none'};">เข้าสู่ระบบ</button>
+        <button onclick="__ns.setAuthMode('signup')" style="flex:1;padding:8px;border-radius:9px;border:none;background:${mode === 'signup' ? '#fff' : 'transparent'};font:700 12.5px 'IBM Plex Sans Thai';color:${mode === 'signup' ? '#1b2722' : '#8a9890'};cursor:pointer;box-shadow:${mode === 'signup' ? '0 2px 6px rgba(0,0,0,.06)' : 'none'};">สมัครสมาชิก</button>
+      </div>
+
+      <input id="ns-auth-email" type="email" value="${esc(v.authEmail || '')}" oninput="__ns.setAuthEmail(this.value)" placeholder="อีเมล" autocomplete="email" style="width:100%;padding:12px 14px;border-radius:12px;border:1px solid #e2ddcf;background:#faf8f1;font:600 13.5px 'IBM Plex Sans Thai';color:#1b2722;outline:none;margin-bottom:9px;">
+      <input id="ns-auth-pwd" type="password" value="${esc(v.authPassword || '')}" oninput="__ns.setAuthPassword(this.value)" placeholder="รหัสผ่าน (อย่างน้อย 6 ตัว)" autocomplete="${mode === 'login' ? 'current-password' : 'new-password'}" style="width:100%;padding:12px 14px;border-radius:12px;border:1px solid #e2ddcf;background:#faf8f1;font:600 13.5px 'IBM Plex Sans Thai';color:#1b2722;outline:none;">
+
+      ${v.authError ? `<div style="font:600 11.5px 'IBM Plex Sans Thai';color:#e85a4f;margin-top:9px;padding:8px 10px;background:#ffeae3;border-radius:9px;">⚠ ${esc(v.authError)}</div>` : ''}
+
+      <button onclick="__ns.${mode === 'login' ? 'authSignIn' : 'authSignUp'}()" ${v.authBusy ? 'disabled' : ''} style="width:100%;margin-top:12px;padding:13px;border-radius:13px;border:none;background:var(--accent);color:#fff;font:700 14px 'IBM Plex Sans Thai';cursor:${v.authBusy ? 'wait' : 'pointer'};opacity:${v.authBusy ? .7 : 1};">
+        ${v.authBusy ? 'กำลังดำเนินการ...' : (mode === 'login' ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก')}
+      </button>
+
+      <div style="font:500 10.5px/1.5 'IBM Plex Sans Thai';color:#8a9890;margin-top:10px;text-align:center;">
+        ${mode === 'signup' ? 'หลังสมัคร อาจต้องยืนยันอีเมลก่อนใช้งาน' : 'ลืมรหัส? ติดต่อทีม dev'}
+      </div>
+    </div>`;
+  }
+
   // ---------- SETTINGS ----------
   function renderSettings(v) {
     const d = v.draft;
@@ -933,6 +1226,8 @@
           </button>
         </div>
       </div>
+
+      ${renderAuthCard(v)}
 
       <div style="margin:14px 18px 0;background:#fff;border:1px solid #efe9da;border-radius:24px;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
         <div>
@@ -1266,6 +1561,9 @@
       earnedBadges, lockedBadges, allBadges: BADGE_DEFS, badgesEarned: state.badges,
       searchOpen: state.searchOpen, searchQuery: state.searchQuery, searchResults,
       darkMode: state.darkMode, toast: state.toast,
+      user: state.user, syncing: state.syncing,
+      authMode: state.authMode, authEmail: state.authEmail, authPassword: state.authPassword,
+      authBusy: state.authBusy, authError: state.authError,
       draft: state.settingsDraft || { userName, dailyGoal:goal, accent:state.accent, darkMode:state.darkMode },
       navHomeColor:   state.page === 'home'   ? accent : '#9aa8a0',
       navReportColor: state.page === 'report' ? accent : '#9aa8a0',
@@ -1320,4 +1618,22 @@
   }
 
   render();
+
+  async function bootSession() {
+    const sb = initSupabase();
+    if (!sb) return;
+    try {
+      const { data } = await sb.auth.getSession();
+      if (data && data.session && data.session.user) {
+        state.user = { id: data.session.user.id, email: data.session.user.email };
+        render();
+        await pullFromCloud();
+      }
+      sb.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_OUT') { state.user = null; render(); }
+      });
+    } catch (e) {}
+  }
+  if (window.supabase) bootSession();
+  else window.addEventListener('load', () => setTimeout(bootSession, 500));
 })();
