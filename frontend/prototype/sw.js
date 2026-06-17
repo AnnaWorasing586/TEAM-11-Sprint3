@@ -2,7 +2,7 @@
 // keeps rendering after first load even without network. API calls bypass
 // the cache so AI scans always hit the live backend.
 
-const CACHE = 'nutriscan-v1';
+const CACHE = 'nutriscan-v2';
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest', 'icon.svg'];
 
 self.addEventListener('install', (event) => {
@@ -17,21 +17,20 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// Network-first for the app shell so updates show on the next reload.
+// Falls back to cache only when offline / fetch fails.
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (event.request.method !== 'GET') return;
   if (url.pathname.includes('/api/')) return;
   if (url.origin !== self.location.origin) return;
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const fetchPromise = fetch(event.request).then((resp) => {
-        if (resp && resp.ok) {
-          const clone = resp.clone();
-          caches.open(CACHE).then((c) => c.put(event.request, clone));
-        }
-        return resp;
-      }).catch(() => cached);
-      return cached || fetchPromise;
-    }),
+    fetch(event.request).then((resp) => {
+      if (resp && resp.ok) {
+        const clone = resp.clone();
+        caches.open(CACHE).then((c) => c.put(event.request, clone));
+      }
+      return resp;
+    }).catch(() => caches.match(event.request)),
   );
 });
