@@ -951,14 +951,24 @@
   }
   function cancelSettings() { setState({ settingsDraft:null, page:'home' }); }
   function resetPrefs() {
-    if (!confirm('รีเซ็ตเป็นค่าเริ่มต้น?\n• ชื่อ, เป้าหมาย, ข้อมูลร่างกาย, ธีม จะถูกล้าง\n• ข้อมูลมื้ออาหารและน้ำดื่มไม่ถูกแตะต้อง')) return;
-    try { localStorage.removeItem(PREFS_KEY); } catch (e) {}
-    const defaults = { userName:'ผู้ใช้', dailyGoal:0, accent:'green', weight:0, height:0, bodyGoal:'', darkMode:false };
+    if (!confirm('รีเซ็ตทุกอย่างเป็นค่าเริ่มต้น?\nจะถูกล้างทั้งหมด:\n• ชื่อ, เป้าหมาย, ข้อมูลร่างกาย, ธีม\n• น้ำดื่ม, มื้ออาหาร, แคลอรีวันนี้\n• สถิติ, เหรียญรางวัล, สถิติย้อนหลัง\n\nการดำเนินการนี้ย้อนกลับไม่ได้')) return;
+    try {
+      localStorage.removeItem(PREFS_KEY);
+      localStorage.removeItem(DAY_KEY);
+      localStorage.removeItem(STATS_KEY);
+    } catch (e) {}
+    const defaults = {
+      userName:'ผู้ใช้', dailyGoal:0, accent:'green', weight:0, height:0, bodyGoal:'', darkMode:false,
+      water:0, consumed:0, pConsumed:0, cConsumed:0, fConsumed:0, meals:[],
+      streak:0, lastLogDate:null, badges:{}, totalScans:0, history:[],
+    };
     Object.assign(state, defaults);
     state.settingsDraft = null;
     savePrefs(state);
+    saveDay(state);
+    saveStats({ streak:0, lastLogDate:null, badges:{}, totalScans:0, history:[] });
     setState({ page: 'home' });
-    showToast('รีเซ็ตเป็นค่าเริ่มต้นแล้ว', 'success');
+    showToast('รีเซ็ตเรียบร้อย — เริ่มต้นใหม่ทั้งหมด', 'success');
   }
 
   window.__ns = {
