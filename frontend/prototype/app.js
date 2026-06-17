@@ -584,12 +584,16 @@
       setAuthBusyDom(false, 'สมัครสมาชิก');
       if (error) { showAuthError(error.message); return; }
       if (data.session) {
-        setState({ user: { id: data.user.id, email: data.user.email }, authOverlayOpen: false });
-        await migrateLocalToCloud();
-        await pullFromCloud();
-      } else {
-        showToast('สมัครสำเร็จ — กรุณาเช็คอีเมลเพื่อยืนยัน', 'success');
+        try { await sb.auth.signOut(); } catch (e) {}
       }
+      setAuthMode('login');
+      const pwd = document.getElementById('ns-auth-pwd');
+      if (pwd) pwd.value = '';
+      const emailInput = document.getElementById('ns-auth-email');
+      if (emailInput) emailInput.focus();
+      showToast(data.session
+        ? 'สมัครสำเร็จ! โปรดเข้าสู่ระบบ'
+        : 'สมัครสำเร็จ — กรุณาเช็คอีเมลเพื่อยืนยัน แล้วเข้าสู่ระบบ', 'success');
     } catch (e) { setAuthBusyDom(false, 'สมัครสมาชิก'); showAuthError('สมัครไม่สำเร็จ'); }
   }
 
