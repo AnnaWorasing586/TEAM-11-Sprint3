@@ -937,17 +937,17 @@
     const d = state.settingsDraft;
     if (!d) return;
     const name = (d.userName || '').trim() || 'ผู้ใช้';
-    setState({
-      userName:  name,
+    const newDraft = {
+      userName: name,
       dailyGoal: clampGoal(d.dailyGoal),
-      accent:    d.accent,
-      weight:    clampNum(d.weight, 0, 250),
-      height:    clampNum(d.height, 0, 230),
-      bodyGoal:  d.bodyGoal,
-      darkMode:  !!d.darkMode,
-      settingsDraft:null,
-      page:'home',
-    });
+      accent: d.accent,
+      weight: clampNum(d.weight, 0, 250),
+      height: clampNum(d.height, 0, 230),
+      bodyGoal: d.bodyGoal,
+      darkMode: !!d.darkMode,
+    };
+    setState({ ...newDraft, settingsDraft: { ...newDraft } });
+    showToast('บันทึกแล้ว', 'success');
   }
   function cancelSettings() { setState({ settingsDraft:null, page:'home' }); }
   function resetPrefs() {
