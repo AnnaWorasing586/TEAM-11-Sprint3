@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://586anna-nutriscan-ai.hf.space/upload">
+  <a href="https://nutriscan-prototype.onrender.com/">
     <img src="https://img.shields.io/badge/NutriScan%20AI-Live%20Demo-green?style=for-the-badge" />
   </a>
 </p>
