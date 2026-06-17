@@ -153,11 +153,6 @@
     toast: null,
     meals: DAY.meals || [],
     user: null,
-    authBusy: false,
-    authError: null,
-    authEmail: '',
-    authPassword: '',
-    authMode: 'login',
     syncing: false,
   };
 
@@ -477,15 +472,39 @@
   // ============================================
   // Auth
   // ============================================
+  function readAuthInputs() {
+    const e = document.getElementById('ns-auth-email');
+    const p = document.getElementById('ns-auth-pwd');
+    return { email: (e && e.value || '').trim(), password: p && p.value || '' };
+  }
+  function showAuthError(msg) {
+    const el = document.getElementById('ns-auth-err');
+    if (el) { el.textContent = '⚠ ' + msg; el.style.display = 'block'; }
+  }
+  function clearAuthError() {
+    const el = document.getElementById('ns-auth-err');
+    if (el) el.style.display = 'none';
+  }
+  function setAuthBusyDom(busy, label) {
+    const b = document.getElementById('ns-auth-submit');
+    if (!b) return;
+    b.disabled = busy;
+    b.style.cursor = busy ? 'wait' : 'pointer';
+    b.style.opacity = busy ? '.7' : '1';
+    if (label) b.textContent = busy ? 'กำลังดำเนินการ...' : label;
+  }
+
   async function authSignUp() {
     const sb = initSupabase();
-    if (!sb) { setState({ authError: 'ไม่ได้ตั้งค่า Supabase' }); return; }
-    if (!state.authEmail || !state.authPassword) { setState({ authError: 'กรอกอีเมลและรหัสผ่าน' }); return; }
-    setState({ authBusy: true, authError: null });
+    if (!sb) { showAuthError('ไม่ได้ตั้งค่า Supabase'); return; }
+    const { email, password } = readAuthInputs();
+    if (!email || !password) { showAuthError('กรอกอีเมลและรหัสผ่าน'); return; }
+    clearAuthError();
+    setAuthBusyDom(true, 'สมัครสมาชิก');
     try {
-      const { data, error } = await sb.auth.signUp({ email: state.authEmail, password: state.authPassword });
-      if (error) { setState({ authBusy: false, authError: error.message }); return; }
-      setState({ authBusy: false, authEmail: '', authPassword: '' });
+      const { data, error } = await sb.auth.signUp({ email, password });
+      setAuthBusyDom(false, 'สมัครสมาชิก');
+      if (error) { showAuthError(error.message); return; }
       if (data.session) {
         setState({ user: { id: data.user.id, email: data.user.email } });
         await migrateLocalToCloud();
@@ -493,21 +512,24 @@
       } else {
         showToast('สมัครสำเร็จ — กรุณาเช็คอีเมลเพื่อยืนยัน', 'success');
       }
-    } catch (e) { setState({ authBusy: false, authError: 'สมัครไม่สำเร็จ' }); }
+    } catch (e) { setAuthBusyDom(false, 'สมัครสมาชิก'); showAuthError('สมัครไม่สำเร็จ'); }
   }
 
   async function authSignIn() {
     const sb = initSupabase();
-    if (!sb) { setState({ authError: 'ไม่ได้ตั้งค่า Supabase' }); return; }
-    if (!state.authEmail || !state.authPassword) { setState({ authError: 'กรอกอีเมลและรหัสผ่าน' }); return; }
-    setState({ authBusy: true, authError: null });
+    if (!sb) { showAuthError('ไม่ได้ตั้งค่า Supabase'); return; }
+    const { email, password } = readAuthInputs();
+    if (!email || !password) { showAuthError('กรอกอีเมลและรหัสผ่าน'); return; }
+    clearAuthError();
+    setAuthBusyDom(true, 'เข้าสู่ระบบ');
     try {
-      const { data, error } = await sb.auth.signInWithPassword({ email: state.authEmail, password: state.authPassword });
-      if (error) { setState({ authBusy: false, authError: error.message }); return; }
-      setState({ authBusy: false, authEmail: '', authPassword: '', user: { id: data.user.id, email: data.user.email } });
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      setAuthBusyDom(false, 'เข้าสู่ระบบ');
+      if (error) { showAuthError(error.message); return; }
+      setState({ user: { id: data.user.id, email: data.user.email } });
       showToast('เข้าสู่ระบบสำเร็จ', 'success');
       await pullFromCloud();
-    } catch (e) { setState({ authBusy: false, authError: 'เข้าสู่ระบบไม่สำเร็จ' }); }
+    } catch (e) { setAuthBusyDom(false, 'เข้าสู่ระบบ'); showAuthError('เข้าสู่ระบบไม่สำเร็จ'); }
   }
 
   async function authSignOut() {
@@ -539,9 +561,31 @@
     } catch (e) {}
   }
 
-  function setAuthEmail(v)    { setState({ authEmail: String(v).slice(0, 100) }); }
-  function setAuthPassword(v) { setState({ authPassword: String(v).slice(0, 100) }); }
-  function setAuthMode(m)     { setState({ authMode: m, authError: null }); }
+  let authModeMem = 'login';
+  function setAuthMode(m) {
+    authModeMem = m;
+    clearAuthError();
+    const tL = document.getElementById('ns-tab-login');
+    const tS = document.getElementById('ns-tab-signup');
+    const sub = document.getElementById('ns-auth-submit');
+    const pwd = document.getElementById('ns-auth-pwd');
+    const hint = document.getElementById('ns-auth-hint');
+    if (tL && tS) {
+      const on = (el, isOn) => {
+        el.style.background = isOn ? '#fff' : 'transparent';
+        el.style.color = isOn ? '#1b2722' : '#8a9890';
+        el.style.boxShadow = isOn ? '0 2px 6px rgba(0,0,0,.06)' : 'none';
+      };
+      on(tL, m === 'login');
+      on(tS, m === 'signup');
+    }
+    if (sub) {
+      sub.textContent = m === 'login' ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก';
+      sub.onclick = m === 'login' ? authSignIn : authSignUp;
+    }
+    if (pwd) pwd.autocomplete = m === 'login' ? 'current-password' : 'new-password';
+    if (hint) hint.textContent = m === 'signup' ? 'หลังสมัคร อาจต้องยืนยันอีเมลก่อนใช้งาน' : 'ลืมรหัส? ติดต่อทีม dev';
+  }
 
   function downloadCSV() {
     const header = 'date,meal,name,kcal,protein,carbs,fat';
@@ -741,7 +785,7 @@
     addWater, resetWater,
     openSearch, closeSearch, updateSearchQuery, pickFromSearch,
     toggleDarkMode, downloadCSV, dismissToast,
-    authSignUp, authSignIn, authSignOut, setAuthEmail, setAuthPassword, setAuthMode,
+    authSignUp, authSignIn, authSignOut, setAuthMode,
     pullFromCloud,
   };
 
@@ -1120,7 +1164,8 @@
         </div>
       </div>`;
     }
-    const mode = v.authMode || 'login';
+    const mode = authModeMem;
+    const tabStyle = (on) => `flex:1;padding:8px;border-radius:9px;border:none;background:${on ? '#fff' : 'transparent'};font:700 12.5px 'IBM Plex Sans Thai';color:${on ? '#1b2722' : '#8a9890'};cursor:pointer;box-shadow:${on ? '0 2px 6px rgba(0,0,0,.06)' : 'none'};`;
     return `
     <div style="margin:14px 18px 0;background:linear-gradient(165deg,#fff,#fbfaf5);border:1px solid #efe9da;border-radius:24px;padding:20px;box-shadow:0 18px 40px -36px rgba(27,39,34,.4);">
       <div style="display:flex;align-items:center;gap:9px;margin-bottom:6px;">
@@ -1130,20 +1175,20 @@
       <div style="font:500 12px/1.5 'IBM Plex Sans Thai';color:#8a9890;margin-bottom:14px;">Login เพื่อ sync ข้อมูลข้ามอุปกรณ์ — เปลี่ยนเครื่องใหม่ login → ข้อมูลตามไปด้วย</div>
 
       <div style="display:flex;gap:6px;background:#f0eadc;padding:4px;border-radius:12px;margin-bottom:14px;">
-        <button onclick="__ns.setAuthMode('login')" style="flex:1;padding:8px;border-radius:9px;border:none;background:${mode === 'login' ? '#fff' : 'transparent'};font:700 12.5px 'IBM Plex Sans Thai';color:${mode === 'login' ? '#1b2722' : '#8a9890'};cursor:pointer;box-shadow:${mode === 'login' ? '0 2px 6px rgba(0,0,0,.06)' : 'none'};">เข้าสู่ระบบ</button>
-        <button onclick="__ns.setAuthMode('signup')" style="flex:1;padding:8px;border-radius:9px;border:none;background:${mode === 'signup' ? '#fff' : 'transparent'};font:700 12.5px 'IBM Plex Sans Thai';color:${mode === 'signup' ? '#1b2722' : '#8a9890'};cursor:pointer;box-shadow:${mode === 'signup' ? '0 2px 6px rgba(0,0,0,.06)' : 'none'};">สมัครสมาชิก</button>
+        <button id="ns-tab-login"  onclick="__ns.setAuthMode('login')"  style="${tabStyle(mode === 'login')}">เข้าสู่ระบบ</button>
+        <button id="ns-tab-signup" onclick="__ns.setAuthMode('signup')" style="${tabStyle(mode === 'signup')}">สมัครสมาชิก</button>
       </div>
 
-      <input id="ns-auth-email" type="email" value="${esc(v.authEmail || '')}" oninput="__ns.setAuthEmail(this.value)" placeholder="อีเมล" autocomplete="email" style="width:100%;padding:12px 14px;border-radius:12px;border:1px solid #e2ddcf;background:#faf8f1;font:600 13.5px 'IBM Plex Sans Thai';color:#1b2722;outline:none;margin-bottom:9px;">
-      <input id="ns-auth-pwd" type="password" value="${esc(v.authPassword || '')}" oninput="__ns.setAuthPassword(this.value)" placeholder="รหัสผ่าน (อย่างน้อย 6 ตัว)" autocomplete="${mode === 'login' ? 'current-password' : 'new-password'}" style="width:100%;padding:12px 14px;border-radius:12px;border:1px solid #e2ddcf;background:#faf8f1;font:600 13.5px 'IBM Plex Sans Thai';color:#1b2722;outline:none;">
+      <input id="ns-auth-email" type="email" placeholder="อีเมล" autocomplete="email" style="width:100%;padding:12px 14px;border-radius:12px;border:1px solid #e2ddcf;background:#faf8f1;font:600 13.5px 'IBM Plex Sans Thai';color:#1b2722;outline:none;margin-bottom:9px;">
+      <input id="ns-auth-pwd" type="password" placeholder="รหัสผ่าน (อย่างน้อย 6 ตัว)" autocomplete="${mode === 'login' ? 'current-password' : 'new-password'}" style="width:100%;padding:12px 14px;border-radius:12px;border:1px solid #e2ddcf;background:#faf8f1;font:600 13.5px 'IBM Plex Sans Thai';color:#1b2722;outline:none;">
 
-      ${v.authError ? `<div style="font:600 11.5px 'IBM Plex Sans Thai';color:#e85a4f;margin-top:9px;padding:8px 10px;background:#ffeae3;border-radius:9px;">⚠ ${esc(v.authError)}</div>` : ''}
+      <div id="ns-auth-err" style="display:none;font:600 11.5px 'IBM Plex Sans Thai';color:#e85a4f;margin-top:9px;padding:8px 10px;background:#ffeae3;border-radius:9px;"></div>
 
-      <button onclick="__ns.${mode === 'login' ? 'authSignIn' : 'authSignUp'}()" ${v.authBusy ? 'disabled' : ''} style="width:100%;margin-top:12px;padding:13px;border-radius:13px;border:none;background:var(--accent);color:#fff;font:700 14px 'IBM Plex Sans Thai';cursor:${v.authBusy ? 'wait' : 'pointer'};opacity:${v.authBusy ? .7 : 1};">
-        ${v.authBusy ? 'กำลังดำเนินการ...' : (mode === 'login' ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก')}
+      <button id="ns-auth-submit" onclick="__ns.${mode === 'login' ? 'authSignIn' : 'authSignUp'}()" style="width:100%;margin-top:12px;padding:13px;border-radius:13px;border:none;background:var(--accent);color:#fff;font:700 14px 'IBM Plex Sans Thai';cursor:pointer;">
+        ${mode === 'login' ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก'}
       </button>
 
-      <div style="font:500 10.5px/1.5 'IBM Plex Sans Thai';color:#8a9890;margin-top:10px;text-align:center;">
+      <div id="ns-auth-hint" style="font:500 10.5px/1.5 'IBM Plex Sans Thai';color:#8a9890;margin-top:10px;text-align:center;">
         ${mode === 'signup' ? 'หลังสมัคร อาจต้องยืนยันอีเมลก่อนใช้งาน' : 'ลืมรหัส? ติดต่อทีม dev'}
       </div>
     </div>`;
@@ -1562,8 +1607,6 @@
       searchOpen: state.searchOpen, searchQuery: state.searchQuery, searchResults,
       darkMode: state.darkMode, toast: state.toast,
       user: state.user, syncing: state.syncing,
-      authMode: state.authMode, authEmail: state.authEmail, authPassword: state.authPassword,
-      authBusy: state.authBusy, authError: state.authError,
       draft: state.settingsDraft || { userName, dailyGoal:goal, accent:state.accent, darkMode:state.darkMode },
       navHomeColor:   state.page === 'home'   ? accent : '#9aa8a0',
       navReportColor: state.page === 'report' ? accent : '#9aa8a0',
