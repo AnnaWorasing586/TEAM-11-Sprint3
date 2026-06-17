@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#15a06a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
 <title>NutriScan AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,9 +28,16 @@
 <script>
   // ตั้งค่า URL ของ backend ที่ deploy บน Render
   // ถ้าเว้นว่าง — prototype จะ fallback เป็น mock data (สุ่ม)
-  // ถ้าใส่ URL — frontend จะส่งรูปไปวิเคราะห์ด้วย Claude Vision จริง
+  // ถ้าใส่ URL — frontend จะส่งรูปไปวิเคราะห์ด้วย Gemini/Claude Vision จริง
   window.NS_API_URL = 'https://nutriscan-api-lpmx.onrender.com';
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
 </script>
+<script src="https://unpkg.com/@zxing/browser@0.1.4/umd/zxing-browser.min.js" defer></script>
 <script src="app.js"></script>
 </body>
 </html>

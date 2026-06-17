@@ -1,0 +1,15 @@
+{
+  "name": "NutriScan AI",
+  "short_name": "NutriScan",
+  "description": "สแกนอาหารและฉลากโภชนาการด้วย AI",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f1ea",
+  "theme_color": "#15a06a",
+  "lang": "th",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

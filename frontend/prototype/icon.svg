@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#15a06a"/>
+      <stop offset="100%" stop-color="#86d3ad"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#g)"/>
+  <g fill="none" stroke="#fff" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M120 168v-32a24 24 0 0 1 24-24h32"/>
+    <path d="M336 112h32a24 24 0 0 1 24 24v32"/>
+    <path d="M392 344v32a24 24 0 0 1-24 24h-32"/>
+    <path d="M176 400h-32a24 24 0 0 1-24-24v-32"/>
+    <circle cx="256" cy="256" r="64"/>
+  </g>
+  <text x="256" y="468" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="64" fill="#fff">N</text>
+</svg>

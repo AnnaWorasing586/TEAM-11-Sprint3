@@ -29,7 +29,14 @@
   };
 
   const PREFS_KEY = 'nutriscan.prefs.v1';
+  const DAY_KEY = 'nutriscan.day.v1';
+  const STATS_KEY = 'nutriscan.stats.v1';
   const BODY_GOALS = ['ลดน้ำหนัก', 'รักษาน้ำหนัก', 'เพิ่มกล้ามเนื้อ'];
+  const WATER_GOAL = 2000;
+
+  const today = () => new Date().toISOString().slice(0, 10);
+  const daysBetween = (a, b) => Math.round((new Date(b) - new Date(a)) / 86400000);
+
   function loadPrefs() {
     try {
       const raw = localStorage.getItem(PREFS_KEY);
@@ -42,6 +49,7 @@
       if (Number.isFinite(p.weight)) out.weight = Math.min(250, Math.max(0, p.weight));
       if (Number.isFinite(p.height)) out.height = Math.min(230, Math.max(0, p.height));
       if (BODY_GOALS.includes(p.bodyGoal)) out.bodyGoal = p.bodyGoal;
+      if (typeof p.darkMode === 'boolean') out.darkMode = p.darkMode;
       return out;
     } catch (e) { return null; }
   }
@@ -54,10 +62,48 @@
         weight:    s.weight,
         height:    s.height,
         bodyGoal:  s.bodyGoal,
+        darkMode:  s.darkMode,
       }));
     } catch (e) {}
   }
+
+  function loadDay() {
+    try {
+      const raw = localStorage.getItem(DAY_KEY);
+      if (!raw) return null;
+      const d = JSON.parse(raw);
+      if (d.date !== today()) return null;
+      return d;
+    } catch (e) { return null; }
+  }
+  function saveDay(s) {
+    try {
+      localStorage.setItem(DAY_KEY, JSON.stringify({
+        date: today(),
+        water: s.water || 0,
+        consumed: s.consumed || 0,
+        pConsumed: s.pConsumed || 0,
+        cConsumed: s.cConsumed || 0,
+        fConsumed: s.fConsumed || 0,
+        meals: s.meals || [],
+      }));
+    } catch (e) {}
+  }
+
+  function loadStats() {
+    try {
+      const raw = localStorage.getItem(STATS_KEY);
+      if (!raw) return { streak: 0, lastLogDate: null, badges: {}, totalScans: 0, history: [] };
+      return JSON.parse(raw);
+    } catch (e) { return { streak: 0, lastLogDate: null, badges: {}, totalScans: 0, history: [] }; }
+  }
+  function saveStats(stats) {
+    try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch (e) {}
+  }
+
   const PREFS = loadPrefs() || {};
+  const DAY = loadDay() || {};
+  const STATS = loadStats();
 
   const state = {
     page: 'home',
@@ -66,18 +112,28 @@
     servings: 1,
     resultFood: FOODS[0],
     resultImage: null,
-    consumed: 0,
-    pConsumed: 0,
-    cConsumed: 0,
-    fConsumed: 0,
+    consumed: DAY.consumed || 0,
+    pConsumed: DAY.pConsumed || 0,
+    cConsumed: DAY.cConsumed || 0,
+    fConsumed: DAY.fConsumed || 0,
+    water: DAY.water || 0,
     accent: PREFS.accent ?? 'green',
     userName: PREFS.userName ?? 'พีรพล',
     dailyGoal: PREFS.dailyGoal ?? 0,
     weight: PREFS.weight ?? 0,
     height: PREFS.height ?? 0,
     bodyGoal: PREFS.bodyGoal ?? '',
+    darkMode: PREFS.darkMode ?? false,
     settingsDraft: null,
-    meals: [],
+    searchOpen: false,
+    searchQuery: '',
+    streak: STATS.streak || 0,
+    lastLogDate: STATS.lastLogDate || null,
+    badges: STATS.badges || {},
+    totalScans: STATS.totalScans || 0,
+    history: STATS.history || [],
+    toast: null,
+    meals: DAY.meals || [],
   };
 
   let scanTimer = null;
@@ -116,6 +172,37 @@
     } catch (e) { return null; }
   }
 
+  async function callBarcodeAPI(barcode) {
+    if (!API_URL) return null;
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 15000);
+      const r = await fetch(API_URL + '/api/scan/barcode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ barcode }),
+        signal: ctrl.signal,
+      });
+      clearTimeout(t);
+      if (!r.ok) return null;
+      const data = await r.json();
+      if (!data || typeof data.kcal !== 'number') return null;
+      return { ...data, confidence: data.confidence || 80 };
+    } catch (e) { return null; }
+  }
+
+  async function decodeBarcodeFromVideo() {
+    const video = document.getElementById('ns-cam');
+    if (!video || !video.videoWidth) return null;
+    const Z = window.ZXingBrowser;
+    if (!Z || !Z.BrowserMultiFormatReader) return null;
+    try {
+      const reader = new Z.BrowserMultiFormatReader();
+      const result = await reader.decodeOnceFromVideoElement(video);
+      return result ? result.getText() : null;
+    } catch (e) { return null; }
+  }
+
   function pickMock() {
     return FOODS[Math.floor(Math.random() * FOODS.length)];
   }
@@ -148,14 +235,92 @@
   const nf = (n) => n.toLocaleString('en-US');
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+  const PREF_KEYS = ['accent','userName','dailyGoal','weight','height','bodyGoal','darkMode'];
+  const DAY_KEYS  = ['water','consumed','pConsumed','cConsumed','fConsumed','meals'];
+  const STAT_KEYS = ['streak','lastLogDate','badges','totalScans','history'];
+
   function setState(patch) {
-    const prev = { accent:state.accent, userName:state.userName, dailyGoal:state.dailyGoal, weight:state.weight, height:state.height, bodyGoal:state.bodyGoal };
+    const prev = {};
+    PREF_KEYS.concat(DAY_KEYS, STAT_KEYS).forEach((k) => { prev[k] = state[k]; });
     Object.assign(state, typeof patch === 'function' ? patch(state) : patch);
-    if (prev.accent !== state.accent || prev.userName !== state.userName || prev.dailyGoal !== state.dailyGoal ||
-        prev.weight !== state.weight || prev.height !== state.height || prev.bodyGoal !== state.bodyGoal) {
-      savePrefs(state);
+    if (PREF_KEYS.some((k) => prev[k] !== state[k])) savePrefs(state);
+    if (DAY_KEYS.some((k) => prev[k] !== state[k])) saveDay(state);
+    if (STAT_KEYS.some((k) => prev[k] !== state[k])) {
+      saveStats({
+        streak: state.streak, lastLogDate: state.lastLogDate,
+        badges: state.badges, totalScans: state.totalScans, history: state.history,
+      });
     }
     render();
+  }
+
+  function showToast(msg, kind) {
+    setState({ toast: { msg, kind: kind || 'info', t: Date.now() } });
+    setTimeout(() => {
+      if (state.toast && Date.now() - state.toast.t >= 2500) setState({ toast: null });
+    }, 2800);
+  }
+
+  function addWater(ml) {
+    const w = Math.max(0, Math.min(5000, (state.water || 0) + ml));
+    setState({ water: w });
+  }
+  function resetWater() { setState({ water: 0 }); }
+
+  const BADGE_DEFS = [
+    { id: 'first_scan',  name: 'สแกนครั้งแรก',       icon: '🎯', check: (s) => s.totalScans >= 1 },
+    { id: 'ten_scans',   name: 'สแกน 10 ครั้ง',         icon: '📸', check: (s) => s.totalScans >= 10 },
+    { id: 'streak_3',    name: 'บันทึก 3 วันติด',       icon: '🔥', check: (s) => s.streak >= 3 },
+    { id: 'streak_7',    name: 'บันทึก 7 วันติด',       icon: '⚡', check: (s) => s.streak >= 7 },
+    { id: 'streak_30',   name: 'บันทึก 30 วันติด',      icon: '👑', check: (s) => s.streak >= 30 },
+    { id: 'water_goal',  name: 'ดื่มน้ำครบ 2L',         icon: '💧', check: (s) => s.water >= WATER_GOAL },
+    { id: 'three_meals', name: 'บันทึก 3 มื้อในวัน',   icon: '🍽️', check: (s) => s.meals.length >= 3 },
+  ];
+
+  function checkBadges() {
+    const earned = { ...state.badges };
+    let newlyEarned = null;
+    BADGE_DEFS.forEach((b) => {
+      if (!earned[b.id] && b.check(state)) {
+        earned[b.id] = today();
+        if (!newlyEarned) newlyEarned = b;
+      }
+    });
+    if (newlyEarned) {
+      setState({ badges: earned });
+      showToast(`ปลดล็อค: ${newlyEarned.icon} ${newlyEarned.name}`, 'success');
+    }
+  }
+
+  function updateStreakOnLog() {
+    const t = today();
+    if (state.lastLogDate === t) return;
+    let newStreak = 1;
+    if (state.lastLogDate) {
+      const gap = daysBetween(state.lastLogDate, t);
+      if (gap === 1) newStreak = (state.streak || 0) + 1;
+      else if (gap === 0) newStreak = state.streak || 1;
+      else newStreak = 1;
+    }
+    setState({ streak: newStreak, lastLogDate: t });
+  }
+
+  function downloadCSV() {
+    const header = 'date,meal,name,kcal,protein,carbs,fat';
+    const rows = state.meals.map((m) =>
+      [today(), m.meal, (m.name || '').replace(/,/g, ' '), m.kcal || 0, m.protein || 0, m.carbs || 0, m.fat || 0].join(','),
+    );
+    const csv = '﻿' + [header, ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nutriscan-meals-${today()}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 500);
+    showToast('ดาวน์โหลดไฟล์แล้ว', 'success');
   }
 
   function go(page) {
@@ -166,10 +331,11 @@
       setState({ page, settingsDraft:{
         userName: state.userName, dailyGoal: state.dailyGoal, accent: state.accent,
         weight: state.weight, height: state.height, bodyGoal: state.bodyGoal,
+        darkMode: state.darkMode,
       } });
       return;
     }
-    setState({ page, scanStage:'idle' });
+    setState({ page, scanStage:'idle', searchOpen:false });
     if (wasScan && page !== 'scan') stopCamera();
     if (!wasScan && page === 'scan') startCamera();
   }
@@ -183,11 +349,22 @@
     setState({ scanStage:'analyzing' });
     const mode = state.activeMode;
     let blob = null;
-    if (mode === 'food' || mode === 'label') {
-      blob = await captureVideoFrame();
-    }
     let food = null;
-    if (blob && API_URL) food = await callRealAPI(blob, mode);
+
+    if (mode === 'barcode') {
+      const code = await decodeBarcodeFromVideo();
+      if (code) {
+        food = await callBarcodeAPI(code);
+        if (!food) showToast('ไม่พบสินค้าในฐานข้อมูล', 'info');
+      } else {
+        showToast('ไม่พบบาร์โค้ดในภาพ — ลองอีกครั้ง', 'info');
+      }
+      blob = await captureVideoFrame();
+    } else if (mode === 'food' || mode === 'label') {
+      blob = await captureVideoFrame();
+      if (blob && API_URL) food = await callRealAPI(blob, mode);
+    }
+
     if (!food) {
       await new Promise((r) => { scanTimer = setTimeout(r, API_URL ? 200 : 1900); });
       scanTimer = null;
@@ -211,10 +388,35 @@
       pConsumed: st.pConsumed + p,
       cConsumed: st.cConsumed + c,
       fConsumed: st.fConsumed + fat,
+      totalScans: (st.totalScans || 0) + 1,
       page:'home',
       scanStage:'idle',
     }));
+    updateStreakOnLog();
+    pushHistory(kcal);
+    checkBadges();
   }
+
+  function pushHistory(kcal) {
+    const t = today();
+    const h = (state.history || []).slice();
+    const idx = h.findIndex((x) => x.date === t);
+    if (idx >= 0) h[idx] = { date: t, kcal: h[idx].kcal + kcal, meals: h[idx].meals + 1 };
+    else h.push({ date: t, kcal, meals: 1 });
+    while (h.length > 30) h.shift();
+    setState({ history: h });
+  }
+
+  function openSearch() { setState({ searchOpen: true, searchQuery: '' }); }
+  function closeSearch() { setState({ searchOpen: false, searchQuery: '' }); }
+  function updateSearchQuery(q) { setState({ searchQuery: String(q).slice(0, 50) }); }
+  function pickFromSearch(idx) {
+    const f = FOODS[idx];
+    if (!f) return;
+    setState({ resultFood: f, resultImage: null, servings: 1, searchOpen: false, searchQuery: '', page: 'result' });
+  }
+
+  function toggleDarkMode() { setState({ darkMode: !state.darkMode }); }
   function deleteMeal(id) {
     const meal = state.meals.find((m) => String(m.id) === String(id));
     if (!meal) return;
@@ -226,6 +428,7 @@
       fConsumed: Math.max(0, st.fConsumed - (meal.fat     || 0)),
     }));
   }
+  function dismissToast() { setState({ toast: null }); }
   function setAccent(name) { setState({ accent:name }); }
   async function onFilePicked(input) {
     if (!input.files || !input.files[0]) return;
@@ -256,6 +459,7 @@
     if (field === 'weight')   d.weight   = clampNum(val, 0, 250);
     if (field === 'height')   d.height   = clampNum(val, 0, 230);
     if (field === 'bodyGoal') d.bodyGoal = BODY_GOALS.includes(val) || val === '' ? val : d.bodyGoal;
+    if (field === 'darkMode') d.darkMode = !!val;
     setState({ settingsDraft:d });
   }
   function clampGoal(val) {
@@ -279,6 +483,7 @@
       weight:    d.weight,
       height:    d.height,
       bodyGoal:  d.bodyGoal,
+      darkMode:  !!d.darkMode,
       settingsDraft:null,
       page:'home',
     });
@@ -290,7 +495,13 @@
     setState({ ...defaults, settingsDraft:{ ...defaults } });
   }
 
-  window.__ns = { go, setMode, onCapture, changeServing, saveResult, setAccent, updateDraft, saveSettings, cancelSettings, resetPrefs, onFilePicked, deleteMeal };
+  window.__ns = {
+    go, setMode, onCapture, changeServing, saveResult, setAccent,
+    updateDraft, saveSettings, cancelSettings, resetPrefs, onFilePicked, deleteMeal,
+    addWater, resetWater,
+    openSearch, closeSearch, updateSearchQuery, pickFromSearch,
+    toggleDarkMode, downloadCSV, dismissToast,
+  };
 
   // ---------- HOME ----------
   function renderHome(v) {
@@ -345,6 +556,7 @@
         <div>
           <div style="font:600 13px/1.2 'IBM Plex Sans Thai';color:#8a9890;letter-spacing:.2px;">${esc(v.greeting)}</div>
           <div style="font:800 23px/1.15 'Plus Jakarta Sans','IBM Plex Sans Thai';color:#1b2722;margin-top:4px;white-space:nowrap;">คุณ${esc(v.userName)}</div>
+          ${v.streak > 0 ? `<div style="display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,#fff5e6,#ffe8c8);color:#c25700;font:700 11px 'IBM Plex Sans Thai';padding:5px 10px;border-radius:999px;margin-top:6px;border:1px solid rgba(194,87,0,.15);">🔥 ${v.streak} วันติด</div>` : ''}
         </div>
         <div style="display:flex;align-items:center;gap:11px;">
           <button title="ตั้งค่า" onclick="__ns.go('settings')" style="width:44px;height:44px;border-radius:15px;background:#fff;border:1px solid #ece7da;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px -8px rgba(27,39,34,.18);cursor:pointer;">
@@ -392,6 +604,36 @@
         </div>
       </div>
 
+      <div style="margin:16px 18px 0;background:linear-gradient(165deg,#eaf5ff,#fff);border:1px solid #d8e9f5;border-radius:24px;padding:18px 18px 16px;box-shadow:0 18px 40px -34px rgba(76,141,255,.35);">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:9px;">
+            <span style="width:36px;height:36px;border-radius:12px;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-size:18px;">💧</span>
+            <div>
+              <div style="font:700 14px 'IBM Plex Sans Thai';color:#1b2722;">น้ำดื่มวันนี้</div>
+              <div style="font:600 11px 'IBM Plex Sans Thai';color:#8a9890;margin-top:2px;">${nf(v.water)} / ${nf(v.waterGoal)} มล.</div>
+            </div>
+          </div>
+          <div style="font:800 22px 'Plus Jakarta Sans';color:#4c8dff;">${v.waterPct}<span style="font:600 12px 'IBM Plex Sans Thai';color:#8a9890;">%</span></div>
+        </div>
+        <div style="height:8px;border-radius:6px;background:#eaf0f7;margin-top:12px;overflow:hidden;">
+          <div style="height:100%;border-radius:6px;background:linear-gradient(90deg,#4c8dff,#7fb3ff);width:${v.waterPct}%;transition:width 1s cubic-bezier(.22,1,.36,1);"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:14px;">
+          <button onclick="__ns.addWater(100)" style="padding:9px 0;border:1px solid #d8e9f5;background:#fff;border-radius:12px;font:700 12px 'IBM Plex Sans Thai';color:#1b4d8c;cursor:pointer;">+100</button>
+          <button onclick="__ns.addWater(250)" style="padding:9px 0;border:1px solid #d8e9f5;background:#fff;border-radius:12px;font:700 12px 'IBM Plex Sans Thai';color:#1b4d8c;cursor:pointer;">+250</button>
+          <button onclick="__ns.addWater(500)" style="padding:9px 0;border:1px solid #d8e9f5;background:#fff;border-radius:12px;font:700 12px 'IBM Plex Sans Thai';color:#1b4d8c;cursor:pointer;">+500</button>
+          <button onclick="__ns.resetWater()" title="รีเซ็ตน้ำดื่ม" style="padding:9px 0;border:1px solid #f4d8d8;background:#fff;border-radius:12px;font:700 12px 'IBM Plex Sans Thai';color:#a04545;cursor:pointer;">รีเซ็ต</button>
+        </div>
+      </div>
+
+      ${v.earnedBadges.length > 0 ? `
+      <div style="margin:16px 18px 0;background:#fff;border:1px solid #efe9da;border-radius:22px;padding:16px 18px;box-shadow:0 12px 28px -28px rgba(27,39,34,.4);">
+        <div style="font:700 13px 'IBM Plex Sans Thai';color:#1b2722;margin-bottom:10px;">เหรียญที่ได้</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          ${v.earnedBadges.map((b) => `<div title="${esc(b.name)}" style="display:flex;align-items:center;gap:6px;background:linear-gradient(135deg,#fff5e6,#ffe8c8);border:1px solid rgba(194,87,0,.15);border-radius:999px;padding:6px 11px;font:600 11.5px 'IBM Plex Sans Thai';color:#1b2722;"><span>${b.icon}</span>${esc(b.name)}</div>`).join('')}
+        </div>
+      </div>` : ''}
+
       <div style="margin:16px 18px 0;background:#fff;border:1px solid #efe9da;border-radius:26px;padding:20px 20px 16px;box-shadow:0 18px 40px -34px rgba(27,39,34,.35);">
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <div style="font:700 15px 'IBM Plex Sans Thai';color:#1b2722;">บันทึกสัปดาห์นี้</div>
@@ -405,7 +647,12 @@
       <div style="margin:16px 18px 0;">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px 12px;">
           <div style="font:700 15px 'IBM Plex Sans Thai';color:#1b2722;">มื้อวันนี้</div>
-          <button onclick="__ns.go('scan')" style="background:none;border:none;font:700 12px 'IBM Plex Sans Thai';color:var(--accent);cursor:pointer;">+ เพิ่มมื้อ</button>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <button onclick="__ns.openSearch()" title="ค้นหาอาหาร" style="background:none;border:none;display:flex;align-items:center;gap:4px;font:700 12px 'IBM Plex Sans Thai';color:var(--accent);cursor:pointer;padding:6px 10px;border-radius:10px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>ค้นหา
+            </button>
+            <button onclick="__ns.go('scan')" style="background:none;border:none;font:700 12px 'IBM Plex Sans Thai';color:var(--accent);cursor:pointer;padding:6px 10px;border-radius:10px;">+ สแกน</button>
+          </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:10px;">
           ${mealsHtml}
@@ -659,6 +906,26 @@
       <div style="margin:14px 18px 0;background:#fff;border:1px solid #efe9da;border-radius:24px;padding:20px;box-shadow:0 18px 40px -36px rgba(27,39,34,.4);">
         <div style="font:700 14px 'IBM Plex Sans Thai';color:#1b2722;margin-bottom:14px;">สีธีมของแอป</div>
         <div style="display:flex;gap:10px;">${swatchHtml}</div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:18px;padding-top:18px;border-top:1px solid #f0eadc;">
+          <div>
+            <div style="font:700 13px 'IBM Plex Sans Thai';color:#1b2722;">โหมดมืด</div>
+            <div style="font:500 11.5px 'IBM Plex Sans Thai';color:#8a9890;margin-top:2px;">เปลี่ยนเป็นพื้นหลังสีเข้ม สบายตาเวลากลางคืน</div>
+          </div>
+          <button onclick="__ns.updateDraft('darkMode', ${d.darkMode ? 'false' : 'true'})" style="position:relative;width:54px;height:30px;border:none;border-radius:999px;background:${d.darkMode ? ACCENTS[d.accent][0] : '#e2ddcf'};cursor:pointer;transition:background .25s;padding:0;">
+            <span style="position:absolute;top:3px;left:${d.darkMode ? '27px' : '3px'};width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.2);transition:left .25s;"></span>
+          </button>
+        </div>
+      </div>
+
+      <div style="margin:14px 18px 0;background:#fff;border:1px solid #efe9da;border-radius:24px;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+        <div>
+          <div style="font:700 14px 'IBM Plex Sans Thai';color:#1b2722;">ดาวน์โหลดประวัติมื้อ (CSV)</div>
+          <div style="font:500 12px 'IBM Plex Sans Thai';color:#8a9890;margin-top:3px;">ส่งออกข้อมูลมื้ออาหารของวันนี้เป็นไฟล์ CSV</div>
+        </div>
+        <button onclick="__ns.downloadCSV()" style="flex:none;padding:10px 14px;border-radius:12px;border:1px solid #d8e9f5;background:#eaf5ff;font:700 12.5px 'IBM Plex Sans Thai';color:#1b4d8c;cursor:pointer;display:flex;align-items:center;gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1b4d8c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>ส่งออก
+        </button>
       </div>
 
       <div style="margin:14px 18px 0;background:#fff;border:1px solid #efe9da;border-radius:24px;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
@@ -692,11 +959,143 @@
         </span>
         <span style="font:700 10.5px 'IBM Plex Sans Thai';color:var(--accent);">สแกน</span>
       </button>
-      <button onclick="__ns.go('result')" style="display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:none;cursor:pointer;">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${v.navResultColor}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M6 20V10M12 20V4M18 20v-6"></path></svg>
-        <span style="font:600 10.5px 'IBM Plex Sans Thai';color:${v.navResultColor};">ผลลัพธ์</span>
+      <button onclick="__ns.go('report')" style="display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:none;cursor:pointer;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${v.navReportColor}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M6 20V10M12 20V4M18 20v-6"></path></svg>
+        <span style="font:600 10.5px 'IBM Plex Sans Thai';color:${v.navReportColor};">รายงาน</span>
       </button>
     </nav>`;
+  }
+
+  // ---------- SEARCH OVERLAY ----------
+  function renderSearchOverlay(v) {
+    if (!v.searchOpen) return '';
+    const list = v.searchResults.map((f) => `
+      <button onclick="__ns.pickFromSearch(${f.idx})" style="display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#fff;border:1px solid #efe9da;border-radius:14px;padding:12px 14px;cursor:pointer;">
+        <span style="width:40px;height:40px;border-radius:11px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;flex:none;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18"></path><path d="M12 11V4"></path><path d="M7 21V11"></path><path d="M17 21V11"></path><path d="M5 21h14"></path></svg>
+        </span>
+        <span style="flex:1;min-width:0;">
+          <span style="display:block;font:600 13.5px 'IBM Plex Sans Thai';color:#1b2722;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(f.name)}</span>
+          <span style="display:block;font:500 11px 'IBM Plex Sans Thai';color:#8a9890;margin-top:2px;">${esc(f.tag)}</span>
+        </span>
+        <span style="font:800 14px 'Plus Jakarta Sans';color:#1b2722;flex:none;">${f.kcal}<span style="font:600 10px 'IBM Plex Sans Thai';color:#a4afa7;"> kcal</span></span>
+      </button>`).join('');
+    const empty = v.searchResults.length === 0 ? `
+      <div style="text-align:center;padding:40px 20px;color:#8a9890;font:500 13px 'IBM Plex Sans Thai';">ไม่พบเมนูที่ตรงกับ "${esc(v.searchQuery)}"</div>` : '';
+    return `
+    <div style="position:absolute;inset:0;z-index:50;background:rgba(244,241,234,.98);backdrop-filter:blur(6px);display:flex;flex-direction:column;animation:ns-fadeUp .3s both;">
+      <header style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;border-bottom:1px solid #efe9da;">
+        <button onclick="__ns.closeSearch()" style="width:38px;height:38px;border-radius:12px;background:#fff;border:1px solid #ece7da;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1b2722" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+        </button>
+        <input id="ns-search-input" type="text" value="${esc(v.searchQuery)}" oninput="__ns.updateSearchQuery(this.value)" placeholder="พิมพ์ชื่อเมนู เช่น 'กะเพรา'" autofocus style="flex:1;padding:11px 14px;border-radius:12px;border:1px solid #e2ddcf;background:#fff;font:600 14px 'IBM Plex Sans Thai';color:#1b2722;outline:none;">
+      </header>
+      <div style="flex:1;overflow-y:auto;padding:14px 18px 18px;display:flex;flex-direction:column;gap:8px;">
+        ${list}${empty}
+      </div>
+    </div>`;
+  }
+
+  // ---------- WEEKLY REPORT ----------
+  function renderReport(v) {
+    const goal = state.dailyGoal;
+    const bigChart = v.week.map((d, i) => `
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:10px;height:100%;justify-content:flex-end;">
+        <div style="font:700 11px 'Plus Jakarta Sans';color:${d.fill === '#d3ddd5' ? '#a4afa7' : v.accent};">${d.val > 0 ? Math.round(d.val) : ''}</div>
+        <div style="width:100%;max-width:34px;height:160px;border-radius:12px;background:#f0f2ec;display:flex;align-items:flex-end;overflow:hidden;">
+          <div style="width:100%;border-radius:12px;height:${d.h};background:${d.fill};transition:height 1s cubic-bezier(.22,1,.36,1);box-shadow:${d.glow};"></div>
+        </div>
+        <span style="font:700 12px 'IBM Plex Sans Thai';color:${d.labelColor};">${esc(d.d)}</span>
+      </div>`).join('');
+
+    const totalKcal = v.weekDays.reduce((a, x) => a + x.val, 0);
+    const totalMeals = v.weekDays.reduce((a, x) => a + (x.mealCount || 0), 0);
+    const adherenceDays = goal > 0 ? v.weekDays.filter((x) => x.val > 0 && x.val <= goal).length : 0;
+    const adherencePct = goal > 0 ? Math.round(adherenceDays / 7 * 100) : 0;
+
+    const topFoodMap = {};
+    state.meals.forEach((m) => { topFoodMap[m.name] = (topFoodMap[m.name] || 0) + 1; });
+    const topFoods = Object.entries(topFoodMap).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    const topFoodsHtml = topFoods.length > 0
+      ? topFoods.map(([name, count]) => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1ede1;">
+          <span style="font:600 13px 'IBM Plex Sans Thai';color:#1b2722;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px;">${esc(name)}</span>
+          <span style="font:700 12px 'IBM Plex Sans Thai';color:var(--accent);flex:none;">${count}×</span>
+        </div>`).join('')
+      : `<div style="text-align:center;padding:20px 0;color:#8a9890;font:500 12.5px 'IBM Plex Sans Thai';">ยังไม่มีข้อมูลพอ — บันทึกมื้ออาหารเพื่อดูสถิติ</div>`;
+
+    return `
+    <section class="${v.screenAnim ? 'ns-screen' : ''}" style="height:100%;overflow-y:auto;padding:0 0 120px;">
+      <header style="display:flex;align-items:center;justify-content:space-between;padding:24px 22px 8px;">
+        <button onclick="__ns.go('home')" style="width:42px;height:42px;border-radius:14px;background:#fff;border:1px solid #ece7da;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 16px -10px rgba(27,39,34,.3);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1b2722" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+        </button>
+        <div style="font:700 16px 'IBM Plex Sans Thai';color:#1b2722;">รายงานสัปดาห์</div>
+        <div style="width:42px;"></div>
+      </header>
+
+      <div style="margin:8px 18px 0;background:linear-gradient(165deg,#fff,#fbfaf5);border:1px solid #efe9da;border-radius:24px;padding:20px;box-shadow:0 18px 40px -34px rgba(27,39,34,.4);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font:700 14px 'IBM Plex Sans Thai';color:#1b2722;">แคลอรี 7 วันล่าสุด</div>
+          <div style="font:700 11px 'IBM Plex Sans Thai';color:var(--accent);background:var(--accent-soft);padding:5px 10px;border-radius:999px;">เฉลี่ย ${v.weekAvg} kcal/วัน</div>
+        </div>
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:7px;height:200px;margin-top:14px;">
+          ${bigChart}
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin:14px 18px 0;">
+        <div style="background:#fff;border:1px solid #efe9da;border-radius:18px;padding:16px;">
+          <div style="font:600 11px 'IBM Plex Sans Thai';color:#8a9890;">รวมพลังงาน</div>
+          <div style="font:800 22px 'Plus Jakarta Sans';color:#1b2722;margin-top:4px;">${nf(totalKcal)}<span style="font:600 11px 'IBM Plex Sans Thai';color:#a4afa7;"> kcal</span></div>
+        </div>
+        <div style="background:#fff;border:1px solid #efe9da;border-radius:18px;padding:16px;">
+          <div style="font:600 11px 'IBM Plex Sans Thai';color:#8a9890;">จำนวนมื้อ</div>
+          <div style="font:800 22px 'Plus Jakarta Sans';color:#1b2722;margin-top:4px;">${totalMeals}<span style="font:600 11px 'IBM Plex Sans Thai';color:#a4afa7;"> มื้อ</span></div>
+        </div>
+        <div style="background:#fff;border:1px solid #efe9da;border-radius:18px;padding:16px;">
+          <div style="font:600 11px 'IBM Plex Sans Thai';color:#8a9890;">วันที่บันทึก</div>
+          <div style="font:800 22px 'Plus Jakarta Sans';color:#1b2722;margin-top:4px;">${v.wkCountLogged}<span style="font:600 11px 'IBM Plex Sans Thai';color:#a4afa7;"> /7</span></div>
+        </div>
+        <div style="background:#fff;border:1px solid #efe9da;border-radius:18px;padding:16px;">
+          <div style="font:600 11px 'IBM Plex Sans Thai';color:#8a9890;">เข้าเป้า</div>
+          <div style="font:800 22px 'Plus Jakarta Sans';color:var(--accent);margin-top:4px;">${adherencePct}<span style="font:600 11px 'IBM Plex Sans Thai';color:#a4afa7;"> %</span></div>
+        </div>
+      </div>
+
+      <div style="margin:14px 18px 0;background:#fff;border:1px solid #efe9da;border-radius:22px;padding:18px;box-shadow:0 12px 28px -28px rgba(27,39,34,.4);">
+        <div style="font:700 14px 'IBM Plex Sans Thai';color:#1b2722;margin-bottom:8px;">อาหารที่กินบ่อยวันนี้</div>
+        ${topFoodsHtml}
+      </div>
+
+      <div style="margin:14px 18px 0;background:linear-gradient(150deg,#1f2b24,#2c3a30);border-radius:24px;padding:20px;color:#fff;">
+        <div style="font:700 13px 'IBM Plex Sans Thai';color:#9fe3bf;">📊 สถิติรวม</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;">
+          <div>
+            <div style="font:800 22px 'Plus Jakarta Sans';">${v.totalScans}</div>
+            <div style="font:500 11px 'IBM Plex Sans Thai';color:#aebfb4;margin-top:2px;">ครั้งที่สแกน</div>
+          </div>
+          <div>
+            <div style="font:800 22px 'Plus Jakarta Sans';">🔥 ${v.streak}</div>
+            <div style="font:500 11px 'IBM Plex Sans Thai';color:#aebfb4;margin-top:2px;">วันติดต่อกัน</div>
+          </div>
+        </div>
+      </div>
+
+      ${v.allBadges.length > 0 ? `
+      <div style="margin:14px 18px 0;background:#fff;border:1px solid #efe9da;border-radius:22px;padding:18px;">
+        <div style="font:700 14px 'IBM Plex Sans Thai';color:#1b2722;margin-bottom:12px;">เหรียญรางวัล (${v.earnedBadges.length}/${v.allBadges.length})</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;">
+          ${v.allBadges.map((b) => {
+            const earned = !!v.badgesEarned[b.id];
+            return `<div style="display:flex;align-items:center;gap:9px;padding:10px 11px;border-radius:14px;border:1px solid ${earned ? 'rgba(194,87,0,.15)' : '#efe9da'};background:${earned ? 'linear-gradient(135deg,#fff5e6,#ffe8c8)' : '#faf8f1'};opacity:${earned ? 1 : .5};">
+              <span style="font-size:20px;flex:none;">${b.icon}</span>
+              <span style="font:600 11.5px 'IBM Plex Sans Thai';color:#1b2722;">${esc(b.name)}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>` : ''}
+    </section>`;
   }
 
   // ---------- DERIVED VIEW ----------
@@ -720,20 +1119,32 @@
       { label:'ไขมัน',  color:'#ff8a5b', v:state.fConsumed, g:65,  unit:'g' },
     ].map((m) => ({ ...m, pct: Math.min(100, Math.round(m.v / m.g * 100)) }));
 
-    const wd = ['อา','จ','อ','พ','พฤ','ศ'];
-    const wbase = [0, 0, 0, 0, 0, 0];
-    const scaleMax = Math.max(goal, 2300);
-    const week = wbase.map((v,i) => ({ d:wd[i], val:v })).concat([{ d:'ส', val:consumed }]).map((w,i) => {
-      const today = i === 6;
-      return {
-        d: w.d,
-        h: Math.round(w.val / scaleMax * 100) + '%',
-        fill: today ? accent : '#d3ddd5',
-        glow: today ? '0 6px 14px -6px ' + accent : 'none',
-        labelColor: today ? accent : '#9aa8a0',
-      };
-    });
-    const weekAvg = nf(Math.round((wbase.reduce((a,b) => a+b, 0) + consumed) / 7));
+    const wd = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+    const wkDays = [];
+    const todayStr = today();
+    for (let i = 6; i >= 0; i--) {
+      const dt = new Date();
+      dt.setDate(dt.getDate() - i);
+      const ds = dt.toISOString().slice(0, 10);
+      const dayLabel = wd[dt.getDay()];
+      const isToday = ds === todayStr;
+      const histEntry = (state.history || []).find((x) => x.date === ds);
+      const val = isToday ? consumed : (histEntry ? histEntry.kcal : 0);
+      wkDays.push({ d: dayLabel, val, isToday, date: ds, mealCount: histEntry ? histEntry.meals : (isToday ? state.meals.length : 0) });
+    }
+    const scaleMax = Math.max(goal, 2300, ...wkDays.map((x) => x.val));
+    const week = wkDays.map((w) => ({
+      d: w.d,
+      h: Math.round(w.val / scaleMax * 100) + '%',
+      fill: w.isToday ? accent : '#d3ddd5',
+      glow: w.isToday ? '0 6px 14px -6px ' + accent : 'none',
+      labelColor: w.isToday ? accent : '#9aa8a0',
+      val: w.val,
+      mealCount: w.mealCount,
+    }));
+    const wkTotal = wkDays.reduce((a, x) => a + x.val, 0);
+    const wkCountLogged = wkDays.filter((x) => x.val > 0).length;
+    const weekAvg = nf(wkCountLogged > 0 ? Math.round(wkTotal / wkCountLogged) : 0);
 
     const w = state.weight, hcm = state.height;
     const bmi = (w > 0 && hcm > 0) ? +(w / Math.pow(hcm / 100, 2)).toFixed(1) : 0;
@@ -786,19 +1197,45 @@
       : cameraTried ? 'กล้องไม่พร้อม · เปิดใน Safari หรืออัปโหลดรูป'
       : 'CAMERA FEED';
 
+    const water = state.water || 0;
+    const waterPct = Math.min(100, Math.round(water / WATER_GOAL * 100));
+
+    const earnedBadges = BADGE_DEFS.filter((b) => state.badges[b.id]);
+    const lockedBadges = BADGE_DEFS.filter((b) => !state.badges[b.id]).slice(0, 3);
+
+    const q = (state.searchQuery || '').toLowerCase().trim();
+    const searchResults = q
+      ? FOODS.map((f, i) => ({ ...f, idx: i }))
+          .filter((f) => f.name.toLowerCase().includes(q) || f.tag.toLowerCase().includes(q))
+          .slice(0, 15)
+      : FOODS.map((f, i) => ({ ...f, idx: i })).slice(0, 15);
+
     return {
       accent, accentSoft, userName, initial:userName.charAt(0), greeting, nextAccent,
       remaining: goalSet ? nf(remaining) : '—', goalLabel: goalSet ? nf(goal) : '—', consumedLabel:nf(consumed), consumedPct, ringOffset, goalSet, bodyGoalLabel,
-      macros, week, weekAvg, body, meals:state.meals,
+      macros, week, weekAvg, weekDays:wkDays, wkCountLogged, wkTotal, body, meals:state.meals,
       modes, modeTitle:mm.title, modeHint:mm.hint,
       scanning:state.scanStage === 'analyzing',
       camLive, camHint,
       food:f, resultKcal:nf(resultKcal), confidence:f.confidence, goalSharePct, resultImage:state.resultImage,
       nutrients, servingLabel,
-      draft: state.settingsDraft || { userName, dailyGoal:goal, accent:state.accent },
+      water, waterPct, waterGoal: WATER_GOAL,
+      streak: state.streak || 0,
+      totalScans: state.totalScans || 0,
+      earnedBadges, lockedBadges, allBadges: BADGE_DEFS, badgesEarned: state.badges,
+      searchOpen: state.searchOpen, searchQuery: state.searchQuery, searchResults,
+      darkMode: state.darkMode, toast: state.toast,
+      draft: state.settingsDraft || { userName, dailyGoal:goal, accent:state.accent, darkMode:state.darkMode },
       navHomeColor:   state.page === 'home'   ? accent : '#9aa8a0',
-      navResultColor: state.page === 'result' ? accent : '#9aa8a0',
+      navReportColor: state.page === 'report' ? accent : '#9aa8a0',
     };
+  }
+
+  function renderToast(v) {
+    if (!v.toast) return '';
+    const colors = v.toast.kind === 'success' ? { bg:'#1f3d2f', fg:'#9fe3bf' } : { bg:'#1b2722', fg:'#fff' };
+    return `
+    <div onclick="__ns.dismissToast()" style="position:absolute;left:50%;bottom:100px;transform:translateX(-50%);background:${colors.bg};color:${colors.fg};padding:11px 18px;border-radius:14px;font:600 13px 'IBM Plex Sans Thai';box-shadow:0 14px 28px -10px rgba(0,0,0,.4);z-index:60;animation:ns-pop .35s both;cursor:pointer;max-width:80%;text-align:center;">${esc(v.toast.msg)}</div>`;
   }
 
   function render() {
@@ -807,6 +1244,8 @@
     lastPage = state.page;
     root.style.setProperty('--accent', v.accent);
     root.style.setProperty('--accent-soft', v.accentSoft);
+    document.documentElement.setAttribute('data-theme', state.darkMode ? 'dark' : 'light');
+    root.setAttribute('data-theme', state.darkMode ? 'dark' : 'light');
 
     const ae = document.activeElement;
     const focusId = ae && ae.id && root.contains(ae) ? ae.id : null;
@@ -818,8 +1257,9 @@
     if (state.page === 'scan')     screen = renderScan(v);
     if (state.page === 'result')   screen = renderResult(v);
     if (state.page === 'settings') screen = renderSettings(v);
+    if (state.page === 'report')   screen = renderReport(v);
     const showNav = state.page !== 'settings';
-    root.innerHTML = screen + (showNav ? renderNav(v) : '');
+    root.innerHTML = screen + renderSearchOverlay(v) + (showNav ? renderNav(v) : '') + renderToast(v);
 
     if (focusId) {
       const next = document.getElementById(focusId);
