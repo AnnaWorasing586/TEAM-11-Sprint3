@@ -36,6 +36,18 @@
     }
   }
 
+  /* Notebook / desktop (≥1101px) — เต็มจอเหมือนกัน */
+  @media (min-width: 1101px) {
+    .ns-wrap { padding: 0 !important; background: #f4f1ea !important; }
+    .ns-blob { display: none; }
+    #app-root {
+      width: 100vw !important;
+      height: 100dvh !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+    }
+  }
+
   /* PWA installed (display-mode: standalone) — เต็มจอเสมอ ไม่ว่าจะอุปกรณ์อะไร */
   @media all and (display-mode: standalone) {
     .ns-wrap { padding: 0 !important; background: #f4f1ea !important; }
@@ -52,6 +64,7 @@
   @supports (padding: max(0px)) {
     @media (max-width: 500px),
            (min-width: 501px) and (max-width: 1100px) and (orientation: portrait),
+           (min-width: 1101px),
            all and (display-mode: standalone) {
       #app-root {
         padding-top: env(safe-area-inset-top);
