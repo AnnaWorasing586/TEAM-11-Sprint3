@@ -914,6 +914,15 @@
     if (!state.settingsDraft) return;
     state.settingsDraft.userName = String(val).slice(0, 30);
   }
+  function toggleDraftDark() {
+    if (!state.settingsDraft) return;
+    state.settingsDraft.darkMode = !state.settingsDraft.darkMode;
+    const btn = document.getElementById('ns-dark-toggle');
+    const knob = document.getElementById('ns-dark-knob');
+    const on = state.settingsDraft.darkMode;
+    if (btn) btn.style.background = on ? ACCENTS[state.settingsDraft.accent][0] : '#e2ddcf';
+    if (knob) knob.style.left = on ? '27px' : '3px';
+  }
   function clampGoal(val) {
     const n = parseInt(val, 10);
     if (!Number.isFinite(n) || n <= 0) return 0;
@@ -963,7 +972,7 @@
     fetchRecommend, fetchWeeklySummary,
     openEdit, closeEdit, updateEditField, dragEdit, saveEdit,
     openAuthOverlay, closeAuthOverlay,
-    dragGoal, dragNumeric, dragName,
+    dragGoal, dragNumeric, dragName, toggleDraftDark,
   };
 
   // ---------- HOME ----------
@@ -1474,8 +1483,8 @@
             <div style="font:700 13px 'IBM Plex Sans Thai';color:#1b2722;">โหมดมืด</div>
             <div style="font:500 11.5px 'IBM Plex Sans Thai';color:#8a9890;margin-top:2px;">เปลี่ยนเป็นพื้นหลังสีเข้ม สบายตาเวลากลางคืน</div>
           </div>
-          <button onclick="__ns.updateDraft('darkMode', ${d.darkMode ? 'false' : 'true'})" style="position:relative;width:54px;height:30px;border:none;border-radius:999px;background:${d.darkMode ? ACCENTS[d.accent][0] : '#e2ddcf'};cursor:pointer;transition:background .25s;padding:0;">
-            <span style="position:absolute;top:3px;left:${d.darkMode ? '27px' : '3px'};width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.2);transition:left .25s;"></span>
+          <button id="ns-dark-toggle" onclick="__ns.toggleDraftDark()" style="position:relative;width:54px;height:30px;border:none;border-radius:999px;background:${d.darkMode ? ACCENTS[d.accent][0] : '#e2ddcf'};cursor:pointer;transition:background .25s;padding:0;">
+            <span id="ns-dark-knob" style="position:absolute;top:3px;left:${d.darkMode ? '27px' : '3px'};width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.2);transition:left .25s;"></span>
           </button>
         </div>
       </div>
