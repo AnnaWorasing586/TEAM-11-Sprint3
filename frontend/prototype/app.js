@@ -1440,8 +1440,6 @@
         </div>
       </div>
 
-      ${renderAuthCard(v)}
-
       <div style="margin:14px 18px 0;background:#fff;border:1px solid #efe9da;border-radius:24px;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
         <div>
           <div style="font:700 14px 'IBM Plex Sans Thai';color:#1b2722;">ดาวน์โหลดประวัติมื้อ (CSV)</div>
