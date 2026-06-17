@@ -506,14 +506,14 @@
   // ---------- HOME ----------
   function renderHome(v) {
     const macrosHtml = v.macros.map((m) => `
-      <div style="background:#faf8f1;border:1px solid #efe9da;border-radius:18px;padding:12px 11px;">
+      <div style="background:#faf8f1;border:1px solid ${m.over ? '#ffd5cc' : '#efe9da'};border-radius:18px;padding:12px 11px;${m.over ? 'background:#fff5f3;' : ''}">
         <div style="display:flex;align-items:center;justify-content:space-between;">
-          <span style="font:600 12px 'IBM Plex Sans Thai';color:#56655d;">${esc(m.label)}</span>
-          <span style="width:8px;height:8px;border-radius:50%;background:${m.color};"></span>
+          <span style="font:600 12px 'IBM Plex Sans Thai';color:#56655d;">${esc(m.label)}${m.over ? ' ⚠️' : ''}</span>
+          <span style="width:8px;height:8px;border-radius:50%;background:${m.displayColor};"></span>
         </div>
-        <div style="font:800 16px 'Plus Jakarta Sans';color:#1b2722;margin-top:7px;">${m.v}<span style="font:600 11px 'IBM Plex Sans Thai';color:#a4afa7;">/${m.g}${m.unit}</span></div>
+        <div style="font:800 16px 'Plus Jakarta Sans';color:${m.over ? '#e85a4f' : '#1b2722'};margin-top:7px;">${m.v}<span style="font:600 11px 'IBM Plex Sans Thai';color:#a4afa7;">/${m.g}${m.unit}</span></div>
         <div style="height:5px;border-radius:4px;background:#eef0ea;margin-top:8px;overflow:hidden;">
-          <div style="height:100%;border-radius:4px;background:${m.color};width:${m.pct}%;transition:width 1.1s ease;"></div>
+          <div style="height:100%;border-radius:4px;background:${m.displayColor};width:${m.pct}%;transition:width 1.1s ease;"></div>
         </div>
       </div>`).join('');
 
@@ -577,11 +577,11 @@
           <div style="position:relative;width:184px;height:184px;flex:none;">
             <svg width="184" height="184" viewBox="0 0 200 200">
               <circle cx="100" cy="100" r="84" fill="none" stroke="#eef0ea" stroke-width="15"></circle>
-              <circle cx="100" cy="100" r="84" fill="none" stroke="var(--accent)" stroke-width="15" stroke-linecap="round" stroke-dasharray="528" style="stroke-dashoffset:${v.ringOffset};transition:stroke-dashoffset 1.4s cubic-bezier(.22,1,.36,1);transform:rotate(-90deg);transform-origin:center;"></circle>
+              <circle cx="100" cy="100" r="84" fill="none" stroke="${v.ringColor}" stroke-width="15" stroke-linecap="round" stroke-dasharray="528" style="stroke-dashoffset:${v.ringOffset};transition:stroke-dashoffset 1.4s cubic-bezier(.22,1,.36,1),stroke 0.4s;transform:rotate(-90deg);transform-origin:center;"></circle>
             </svg>
             <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-              <div style="font:800 40px/1 'Plus Jakarta Sans';color:#1b2722;letter-spacing:-1px;">${v.remaining}</div>
-              <div style="font:600 12px 'IBM Plex Sans Thai';color:#8a9890;margin-top:4px;">kcal เหลือ</div>
+              <div style="font:800 ${v.isOver ? '32' : '40'}px/1 'Plus Jakarta Sans';color:${v.isOver ? '#e85a4f' : '#1b2722'};letter-spacing:-1px;">${v.isOver ? '+' + v.overByLabel : v.remaining}</div>
+              <div style="font:600 12px 'IBM Plex Sans Thai';color:${v.isOver ? '#e85a4f' : '#8a9890'};margin-top:4px;">kcal ${v.isOver ? 'เกินเป้า' : 'เหลือ'}</div>
             </div>
           </div>
           <div style="flex:1;display:flex;flex-direction:column;gap:14px;">
@@ -591,11 +591,12 @@
             </div>
             <div>
               <div style="font:600 11px 'IBM Plex Sans Thai';color:#8a9890;">กินไปแล้ว</div>
-              <div style="font:800 19px 'Plus Jakarta Sans';color:var(--accent);">${v.consumedLabel} <span style="font:600 12px 'IBM Plex Sans Thai';color:#8a9890;">kcal</span></div>
+              <div style="font:800 19px 'Plus Jakarta Sans';color:${v.ringColor};">${v.consumedLabel} <span style="font:600 12px 'IBM Plex Sans Thai';color:#8a9890;">kcal</span></div>
             </div>
             <div style="height:8px;border-radius:6px;background:#eef0ea;overflow:hidden;">
-              <div style="height:100%;border-radius:6px;background:linear-gradient(90deg,var(--accent),#7ed0a8);width:${v.consumedPct}%;transition:width 1.2s cubic-bezier(.22,1,.36,1);"></div>
+              <div style="height:100%;border-radius:6px;background:${v.isOver ? 'linear-gradient(90deg,#e85a4f,#ff8a5b)' : 'linear-gradient(90deg,var(--accent),#7ed0a8)'};width:${v.consumedPct}%;transition:width 1.2s cubic-bezier(.22,1,.36,1);"></div>
             </div>
+            ${v.isOver ? `<div style="display:flex;align-items:center;gap:6px;font:600 11px 'IBM Plex Sans Thai';color:#e85a4f;background:#ffeae3;padding:6px 10px;border-radius:8px;border:1px solid #ffd5cc;">⚠️ กินเกินเป้าหมาย ${v.overByLabel} kcal</div>` : ''}
           </div>
         </div>
 
@@ -1105,10 +1106,13 @@
     const userName = state.userName;
     const consumed = state.consumed;
     const goalSet = goal > 0;
+    const overBy = goalSet ? Math.max(0, consumed - goal) : 0;
+    const isOver = overBy > 0;
     const remaining = goalSet ? Math.max(0, goal - consumed) : 0;
     const consumedPct = goalSet ? Math.min(100, Math.round(consumed / goal * 100)) : 0;
     const C = 2 * Math.PI * 84;
     const ringOffset = goalSet ? C * (1 - Math.min(1, consumed / goal)) : C;
+    const ringColor = isOver ? '#e85a4f' : accent;
 
     const h = new Date().getHours();
     const greeting = h < 11 ? 'สวัสดีตอนเช้า ☀' : h < 17 ? 'สวัสดีตอนบ่าย' : 'สวัสดีตอนเย็น';
@@ -1117,7 +1121,10 @@
       { label:'โปรตีน', color:'#4c8dff', v:state.pConsumed, g:120, unit:'g' },
       { label:'คาร์บ',  color:'#f5a524', v:state.cConsumed, g:250, unit:'g' },
       { label:'ไขมัน',  color:'#ff8a5b', v:state.fConsumed, g:65,  unit:'g' },
-    ].map((m) => ({ ...m, pct: Math.min(100, Math.round(m.v / m.g * 100)) }));
+    ].map((m) => {
+      const over = m.v > m.g;
+      return { ...m, pct: Math.min(100, Math.round(m.v / m.g * 100)), over, displayColor: over ? '#e85a4f' : m.color };
+    });
 
     const wd = ['อา','จ','อ','พ','พฤ','ศ','ส'];
     const wkDays = [];
@@ -1212,7 +1219,7 @@
 
     return {
       accent, accentSoft, userName, initial:userName.charAt(0), greeting, nextAccent,
-      remaining: goalSet ? nf(remaining) : '—', goalLabel: goalSet ? nf(goal) : '—', consumedLabel:nf(consumed), consumedPct, ringOffset, goalSet, bodyGoalLabel,
+      remaining: goalSet ? nf(remaining) : '—', goalLabel: goalSet ? nf(goal) : '—', consumedLabel:nf(consumed), consumedPct, ringOffset, ringColor, goalSet, isOver, overByLabel: nf(overBy), bodyGoalLabel,
       macros, week, weekAvg, weekDays:wkDays, wkCountLogged, wkTotal, body, meals:state.meals,
       modes, modeTitle:mm.title, modeHint:mm.hint,
       scanning:state.scanStage === 'analyzing',
