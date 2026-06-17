@@ -672,8 +672,19 @@
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px;position:relative;">
           ${bodyHtml}
         </div>
+        ${v.bmiAdvice ? `
+        <div style="display:flex;align-items:flex-start;gap:8px;margin-top:14px;padding:10px 12px;background:${v.bmiAdvice.level === 'warn' ? 'rgba(232,90,79,.15)' : v.bmiAdvice.level === 'caution' ? 'rgba(245,165,36,.15)' : 'rgba(126,208,168,.18)'};border:1px solid ${v.bmiAdvice.level === 'warn' ? 'rgba(232,90,79,.35)' : v.bmiAdvice.level === 'caution' ? 'rgba(245,165,36,.35)' : 'rgba(126,208,168,.3)'};border-radius:12px;position:relative;">
+          <span style="font-size:14px;flex:none;line-height:1.5;">${v.bmiAdvice.level === 'ok' ? '✓' : 'ⓘ'}</span>
+          <div>
+            <div style="font:700 12px 'IBM Plex Sans Thai';color:${v.bmiAdvice.level === 'warn' ? '#ffb6ad' : v.bmiAdvice.level === 'caution' ? '#ffd58a' : '#9fe3bf'};">BMI ${v.bmiValue.toFixed(1)} · ${esc(v.bmiAdvice.label)}</div>
+            <div style="font:500 11px 'IBM Plex Sans Thai';color:#aebfb4;margin-top:3px;line-height:1.45;">${esc(v.bmiAdvice.tip)}</div>
+          </div>
+        </div>` : `
         <div style="display:flex;align-items:center;gap:8px;margin-top:14px;font:500 11.5px 'IBM Plex Sans Thai';color:#9fe3bf;position:relative;">
           <span style="width:6px;height:6px;border-radius:50%;background:#9fe3bf;"></span>กรอกข้อมูลร่างกายเพื่อให้ AI ช่วยคำนวณเป้าหมายให้คุณ
+        </div>`}
+        <div style="font:500 10.5px 'IBM Plex Sans Thai';color:#7a8c84;margin-top:8px;line-height:1.5;position:relative;">
+          * ค่า TDEE และ BMI เป็นค่าประมาณ ไม่ใช่คำวินิจฉัยทางการแพทย์ — ปรึกษาแพทย์/นักโภชนาการสำหรับคำแนะนำส่วนบุคคล
         </div>
       </div>
     </section>`;
@@ -780,7 +791,7 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1b2722" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
         </button>
         <div style="font:700 15px 'IBM Plex Sans Thai';color:#1b2722;white-space:nowrap;">ผลการวิเคราะห์</div>
-        <div style="display:flex;align-items:center;gap:6px;background:var(--accent-soft);color:var(--accent);font:800 11px 'Plus Jakarta Sans';padding:8px 11px;border-radius:999px;white-space:nowrap;">AI ${v.confidence}%</div>
+        <div title="${v.confidence < 70 ? 'ความมั่นใจต่ำ ตรวจสอบกับฉลากจริง' : 'AI วิเคราะห์อย่างมั่นใจ'}" style="display:flex;align-items:center;gap:6px;background:${v.confidence < 70 ? 'rgba(245,165,36,.15)' : 'var(--accent-soft)'};color:${v.confidence < 70 ? '#c97a00' : 'var(--accent)'};font:800 11px 'Plus Jakarta Sans';padding:8px 11px;border-radius:999px;white-space:nowrap;border:1px solid ${v.confidence < 70 ? 'rgba(245,165,36,.35)' : 'transparent'};">${v.confidence < 70 ? '⚠ ' : ''}AI ${v.confidence}%</div>
       </header>
 
       <div style="margin:8px 18px 0;border-radius:28px;overflow:hidden;background:#fff;border:1px solid #efe9da;box-shadow:0 24px 50px -34px rgba(27,39,34,.45);">
@@ -827,6 +838,10 @@
         ${nutHtml}
         <div style="display:flex;align-items:flex-start;gap:8px;margin-top:13px;font:500 11.5px/1.5 'IBM Plex Sans Thai';color:var(--accent);">
           <span style="width:6px;height:6px;border-radius:50%;background:var(--accent);margin-top:6px;flex:none;"></span><span>คำนวณโดย AI · ค่าโดยประมาณ ควรตรวจสอบกับฉลากของผลิตภัณฑ์อีกครั้ง</span>
+        </div>
+        <div style="margin-top:10px;padding-top:12px;border-top:1px solid #f1ede1;font:500 10.5px/1.55 'IBM Plex Sans Thai';color:#7a8c84;">
+          <strong style="color:#56655d;font-weight:700;">ที่มา:</strong> ค่า % ต่อวันอ้างอิง <em>Thai RDI</em> (Recommended Daily Intake) โดยคิดจากความต้องการพลังงานเฉลี่ย 2,000 kcal/วันสำหรับคนไทยอายุ 6 ปีขึ้นไป<br><br>
+          <strong style="color:#56655d;font-weight:700;">ข้อจำกัด:</strong> ผลการวิเคราะห์ใช้เป็น guideline เท่านั้น ไม่ใช่คำแนะนำทางการแพทย์หรือโภชนาการเฉพาะบุคคล หากมีโรคประจำตัว/อาการแพ้/ภาวะพิเศษ ปรึกษาแพทย์หรือนักโภชนาการก่อนตัดสินใจ
         </div>
       </div>
 
@@ -942,6 +957,16 @@
         <button onclick="__ns.saveSettings()" style="flex:2;height:54px;border-radius:17px;border:none;background:var(--accent);color:#fff;font:700 15px 'IBM Plex Sans Thai';cursor:pointer;box-shadow:0 14px 30px -12px rgba(21,160,106,.8);display:flex;align-items:center;justify-content:center;gap:8px;">
           <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>บันทึก
         </button>
+      </div>
+
+      <div style="margin:24px 18px 0;padding:16px 18px;background:#fbf8f0;border:1px solid #efe9da;border-radius:16px;">
+        <div style="display:flex;align-items:flex-start;gap:9px;">
+          <span style="font-size:14px;flex:none;line-height:1.5;">ⓘ</span>
+          <div style="font:500 11.5px/1.55 'IBM Plex Sans Thai';color:#56655d;">
+            <strong style="font-weight:700;color:#1b2722;">ข้อจำกัดความรับผิดชอบ</strong><br>
+            NutriScan AI ใช้เป็นเครื่องมือช่วยติดตามโภชนาการเบื้องต้นเท่านั้น ค่าที่แสดง (TDEE, BMI, แคลอรี, สารอาหาร) เป็นค่าประมาณจากสูตรมาตรฐาน <strong style="font-weight:700;">ไม่ใช่คำวินิจฉัยหรือคำแนะนำทางการแพทย์</strong> หากต้องการแผนโภชนาการเฉพาะบุคคล หรือมีโรคประจำตัว/ภาวะพิเศษ กรุณาปรึกษาแพทย์ นักโภชนาการ หรือบุคลากรทางการแพทย์ที่มีใบประกอบวิชาชีพ
+          </div>
+        </div>
       </div>
     </section>`;
   }
@@ -1164,6 +1189,15 @@
     ];
     const bodyGoalLabel = state.bodyGoal || 'ยังไม่ตั้งค่า';
 
+    let bmiAdvice = null;
+    if (bmi > 0) {
+      if (bmi < 18.5)      bmiAdvice = { label: 'น้ำหนักต่ำกว่าเกณฑ์', level: 'warn', tip: 'ควรปรึกษาแพทย์/นักโภชนาการก่อนตั้งเป้าลดน้ำหนัก' };
+      else if (bmi < 23)   bmiAdvice = { label: 'น้ำหนักปกติ',           level: 'ok',   tip: 'อยู่ในเกณฑ์มาตรฐานคนไทย' };
+      else if (bmi < 25)   bmiAdvice = { label: 'น้ำหนักเกินเกณฑ์',     level: 'caution', tip: 'ออกกำลังกายและคุมอาหารช่วยลดความเสี่ยง' };
+      else if (bmi < 30)   bmiAdvice = { label: 'อ้วนระดับ 1',           level: 'warn', tip: 'ปรึกษาแพทย์เพื่อวางแผนสุขภาพ' };
+      else                 bmiAdvice = { label: 'อ้วนระดับ 2 ขึ้นไป',  level: 'warn', tip: 'ปรึกษาแพทย์โดยเร็ว' };
+    }
+
     const modeMeta = {
       food:    { label:'ถ่ายอาหาร',     title:'ถ่ายรูปอาหาร',         hint:'จัดให้อาหารอยู่กลางกรอบ แล้วกดถ่าย' },
       barcode: { label:'บาร์โค้ด',       title:'สแกนบาร์โค้ด',          hint:'เล็งบาร์โค้ดบนบรรจุภัณฑ์ให้อยู่ในกรอบ' },
@@ -1219,7 +1253,7 @@
 
     return {
       accent, accentSoft, userName, initial:userName.charAt(0), greeting, nextAccent,
-      remaining: goalSet ? nf(remaining) : '—', goalLabel: goalSet ? nf(goal) : '—', consumedLabel:nf(consumed), consumedPct, ringOffset, ringColor, goalSet, isOver, overByLabel: nf(overBy), bodyGoalLabel,
+      remaining: goalSet ? nf(remaining) : '—', goalLabel: goalSet ? nf(goal) : '—', consumedLabel:nf(consumed), consumedPct, ringOffset, ringColor, goalSet, isOver, overByLabel: nf(overBy), bodyGoalLabel, bmiAdvice, bmiValue: bmi,
       macros, week, weekAvg, weekDays:wkDays, wkCountLogged, wkTotal, body, meals:state.meals,
       modes, modeTitle:mm.title, modeHint:mm.hint,
       scanning:state.scanStage === 'analyzing',
