@@ -107,3 +107,44 @@
   /* Toggle button background */
   #app-root[data-theme="dark"] [style*="background:#e2ddcf"] { background: #2f383c !important; }
   #app-root[data-theme="dark"] [style*="background:#f0eadc"] { background: #20272a !important; }
+
+  /* === extra targeted overrides for elements that earlier rules missed === */
+
+  /* Streak / badge cream gradients */
+  #app-root[data-theme="dark"] [style*="linear-gradient(135deg,#fff5e6,#ffe8c8)"] {
+    background: linear-gradient(135deg,#2a2418,#3a2e1c) !important;
+    border-color: rgba(245,197,99,.25) !important;
+  }
+
+  /* Result page calorie-summary card uses (150deg, var(--accent-soft), #fbfaf5) — not caught by 165deg rules */
+  #app-root[data-theme="dark"] [style*="linear-gradient(150deg,var(--accent-soft),#fbfaf5)"],
+  #app-root[data-theme="dark"] [style*="linear-gradient(150deg,var(--accent-soft)"] {
+    background: linear-gradient(150deg,#1b2e25,#1c2326) !important;
+  }
+
+  /* Edit modal sheet (uses #f4f1ea base) was already covered, but its border-bottom #f1ede1 wasn't */
+  #app-root[data-theme="dark"] [style*="border-bottom:1px solid #f1ede1"] { border-bottom-color: #2a3236 !important; }
+
+  /* Inline highlight colors that still appear too dark on dark bg */
+  #app-root[data-theme="dark"] [style*="color:#c25700"] { color: #f5c563 !important; }
+  #app-root[data-theme="dark"] [style*="color:#a04545"] { color: #ff9a8a !important; }
+  #app-root[data-theme="dark"] [style*="color:#b3aa93"] { color: #a8b3ad !important; }
+
+  /* Settings 'พิมพ์เลขในช่อง...' hint with strong tag inside */
+  #app-root[data-theme="dark"] strong[style*="color:#56655d"] { color: #d6dedb !important; }
+
+  /* Disclaimer footnotes (color:#7a8c84 with margin-top) */
+  #app-root[data-theme="dark"] [style*="color:#7a8c84"] { color: #a8b3ad !important; }
+
+  /* AI recommend / weekly-summary cards already overridden, but their tip/warning tinted text */
+  #app-root[data-theme="dark"] [style*="color:#1b4d8c"] { color: #7fb3ff !important; }
+  #app-root[data-theme="dark"] [style*="background:#eaf5ff"] { background: #1b2a3a !important; }
+  #app-root[data-theme="dark"] [style*="background:#dbeafe"] { background: #1b2a3a !important; }
+  #app-root[data-theme="dark"] [style*="background:#fdf2dd"] { background: linear-gradient(135deg,#2a2418,#1c2326) !important; }
+
+  /* Buttons that were rendered as plain #fff (water +100/+250/+500, reset, etc.) */
+  #app-root[data-theme="dark"] button[style*="background:#fff"],
+  #app-root[data-theme="dark"] button[style*="background: #fff"] { background: #20272a !important; color: #e8edec; }
+
+  /* On the BMI warning advisory card, keep red text readable */
+  #app-root[data-theme="dark"] [style*="color:#ffb6ad"] { color: #ffb6ad !important; }

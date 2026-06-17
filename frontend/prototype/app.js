@@ -693,6 +693,11 @@
     const v = Number.isFinite(n) ? Math.max(0, Math.min(99999, n)) : 0;
     setState({ editFood: { ...state.editFood, [field]: v } });
   }
+  function dragEdit(field, val) {
+    if (!state.editFood) return;
+    const n = parseInt(val, 10);
+    state.editFood[field] = Number.isFinite(n) && n >= 0 ? Math.min(99999, n) : 0;
+  }
   function saveEdit() {
     if (!state.editFood) return;
     setState({ resultFood: { ...state.editFood, confidence: 100 }, editOpen: false, editFood: null });
@@ -956,7 +961,7 @@
     authSignUp, authSignIn, authSignOut, setAuthMode,
     pullFromCloud,
     fetchRecommend, fetchWeeklySummary,
-    openEdit, closeEdit, updateEditField, saveEdit,
+    openEdit, closeEdit, updateEditField, dragEdit, saveEdit,
     openAuthOverlay, closeAuthOverlay,
     dragGoal, dragNumeric, dragName,
   };
@@ -1557,7 +1562,7 @@
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #f1ede1;">
         <label style="font:600 13px 'IBM Plex Sans Thai';color:#1b2722;">${esc(label)}</label>
         <div style="display:flex;align-items:center;gap:8px;">
-          <input type="number" min="0" max="9999" value="${val}" oninput="__ns.updateEditField('${field}', this.value)" style="width:80px;padding:8px 10px;border-radius:10px;border:1px solid #e2ddcf;background:#faf8f1;font:700 14px 'Plus Jakarta Sans';color:#1b2722;outline:none;text-align:center;">
+          <input id="ns-edit-${field}" type="number" min="0" max="9999" value="${val}" oninput="__ns.dragEdit('${field}', this.value)" style="width:80px;padding:8px 10px;border-radius:10px;border:1px solid #e2ddcf;background:#faf8f1;font:700 14px 'Plus Jakarta Sans';color:#1b2722;outline:none;text-align:center;">
           <span style="font:600 11px 'IBM Plex Sans Thai';color:#8a9890;">${esc(unit)}</span>
         </div>
       </div>`;
