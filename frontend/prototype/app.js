@@ -160,6 +160,7 @@
     summaryBusy: false,
     editOpen: false,
     editFood: null,
+    authOverlayOpen: false,
   };
 
   let scanTimer = null;
@@ -583,7 +584,7 @@
       setAuthBusyDom(false, 'สมัครสมาชิก');
       if (error) { showAuthError(error.message); return; }
       if (data.session) {
-        setState({ user: { id: data.user.id, email: data.user.email } });
+        setState({ user: { id: data.user.id, email: data.user.email }, authOverlayOpen: false });
         await migrateLocalToCloud();
         await pullFromCloud();
       } else {
@@ -603,7 +604,7 @@
       const { data, error } = await sb.auth.signInWithPassword({ email, password });
       setAuthBusyDom(false, 'เข้าสู่ระบบ');
       if (error) { showAuthError(error.message); return; }
-      setState({ user: { id: data.user.id, email: data.user.email } });
+      setState({ user: { id: data.user.id, email: data.user.email }, authOverlayOpen: false });
       showToast('เข้าสู่ระบบสำเร็จ', 'success');
       await pullFromCloud();
     } catch (e) { setAuthBusyDom(false, 'เข้าสู่ระบบ'); showAuthError('เข้าสู่ระบบไม่สำเร็จ'); }
@@ -683,6 +684,8 @@
     if (!state.resultFood) return;
     setState({ editOpen: true, editFood: { ...state.resultFood } });
   }
+  function openAuthOverlay()  { setState({ authOverlayOpen: true }); }
+  function closeAuthOverlay() { setState({ authOverlayOpen: false }); }
   function closeEdit() { setState({ editOpen: false, editFood: null }); }
   function updateEditField(field, val) {
     if (!state.editFood) return;
@@ -916,6 +919,7 @@
     pullFromCloud,
     fetchRecommend, fetchWeeklySummary,
     openEdit, closeEdit, updateEditField, saveEdit,
+    openAuthOverlay, closeAuthOverlay,
   };
 
   // ---------- HOME ----------
@@ -977,7 +981,7 @@
           <button title="ตั้งค่า" onclick="__ns.go('settings')" style="width:44px;height:44px;border-radius:15px;background:#fff;border:1px solid #ece7da;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px -8px rgba(27,39,34,.18);cursor:pointer;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1b2722" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>
           </button>
-          <div style="width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:800 18px 'Plus Jakarta Sans';color:#fff;background:linear-gradient(140deg,var(--accent),#86d3ad);box-shadow:0 8px 18px -8px rgba(21,160,106,.7);">${esc(v.initial)}</div>
+          <button title="${v.user ? 'บัญชีของคุณ' : 'เข้าสู่ระบบ / สมัครสมาชิก'}" onclick="__ns.openAuthOverlay()" style="width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:800 18px 'Plus Jakarta Sans';color:#fff;background:linear-gradient(140deg,var(--accent),#86d3ad);box-shadow:0 8px 18px -8px rgba(21,160,106,.7);border:none;cursor:pointer;padding:0;">${esc(v.initial)}</button>
         </div>
       </header>
 
@@ -1491,6 +1495,22 @@
     </nav>`;
   }
 
+  // ---------- AUTH OVERLAY (from avatar button) ----------
+  function renderAuthOverlay(v) {
+    if (!v.authOverlayOpen) return '';
+    if (!SB_URL || !SB_KEY) return '';
+    const inner = renderAuthCard(v);
+    return `
+    <div onclick="if(event.target===this)__ns.closeAuthOverlay()" style="position:absolute;inset:0;z-index:55;background:rgba(0,0,0,.5);display:flex;align-items:flex-start;justify-content:center;padding-top:60px;animation:ns-fadeUp .25s both;">
+      <div style="width:calc(100% - 32px);max-width:380px;max-height:calc(100% - 100px);overflow-y:auto;position:relative;">
+        <button onclick="__ns.closeAuthOverlay()" style="position:absolute;top:8px;right:8px;width:34px;height:34px;border-radius:11px;border:1px solid #e2ddcf;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;box-shadow:0 6px 14px -6px rgba(0,0,0,.25);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1b2722" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+        </button>
+        ${inner}
+      </div>
+    </div>`;
+  }
+
   // ---------- EDIT RESULT OVERLAY ----------
   function renderEditOverlay(v) {
     if (!v.editOpen || !v.editFood) return '';
@@ -1828,6 +1848,7 @@
       recommend: state.recommend, recommendBusy: state.recommendBusy,
       weeklySummary: state.weeklySummary, summaryBusy: state.summaryBusy,
       editOpen: state.editOpen, editFood: state.editFood,
+      authOverlayOpen: state.authOverlayOpen,
       draft: state.settingsDraft || { userName, dailyGoal:goal, accent:state.accent, darkMode:state.darkMode },
       navHomeColor:   state.page === 'home'   ? accent : '#9aa8a0',
       navReportColor: state.page === 'report' ? accent : '#9aa8a0',
@@ -1862,7 +1883,7 @@
     if (state.page === 'settings') screen = renderSettings(v);
     if (state.page === 'report')   screen = renderReport(v);
     const showNav = state.page !== 'settings';
-    root.innerHTML = screen + renderSearchOverlay(v) + renderEditOverlay(v) + (showNav ? renderNav(v) : '') + renderToast(v);
+    root.innerHTML = screen + renderSearchOverlay(v) + renderEditOverlay(v) + renderAuthOverlay(v) + (showNav ? renderNav(v) : '') + renderToast(v);
 
     if (focusId) {
       const next = document.getElementById(focusId);
