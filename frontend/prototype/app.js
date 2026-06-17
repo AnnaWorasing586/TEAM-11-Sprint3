@@ -154,6 +154,12 @@
     meals: DAY.meals || [],
     user: null,
     syncing: false,
+    recommend: null,
+    recommendBusy: false,
+    weeklySummary: null,
+    summaryBusy: false,
+    editOpen: false,
+    editFood: null,
   };
 
   let scanTimer = null;
@@ -162,6 +168,27 @@
   let cameraTried = false;
   const root = document.getElementById('app-root');
   const API_URL = (window.NS_API_URL || '').replace(/\/$/, '');
+
+  // ============================================
+  // Image cache (saves AI quota for repeat scans)
+  // ============================================
+  const IMG_CACHE_KEY = 'nutriscan.imgcache.v1';
+  const imgCache = (() => {
+    try { return JSON.parse(sessionStorage.getItem(IMG_CACHE_KEY) || '{}'); } catch (e) { return {}; }
+  })();
+  async function hashBlob(blob) {
+    try {
+      const buf = await blob.arrayBuffer();
+      const digest = await crypto.subtle.digest('SHA-256', buf);
+      return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
+    } catch (e) { return null; }
+  }
+  function cacheGet(hash) { return hash ? imgCache[hash] : null; }
+  function cacheSet(hash, food) {
+    if (!hash) return;
+    imgCache[hash] = food;
+    try { sessionStorage.setItem(IMG_CACHE_KEY, JSON.stringify(imgCache)); } catch (e) {}
+  }
 
   function captureVideoFrame() {
     const video = document.getElementById('ns-cam');
@@ -189,6 +216,56 @@
       const data = await r.json();
       if (!data || typeof data.kcal !== 'number') return null;
       return { ...data, confidence: data.confidence || 80 };
+    } catch (e) { return null; }
+  }
+
+  async function callRecommend() {
+    if (!API_URL) return null;
+    const goal = state.dailyGoal || 0;
+    const r_kcal = Math.max(0, goal - state.consumed);
+    const r_prot = Math.max(0, 120 - state.pConsumed);
+    const r_carb = Math.max(0, 250 - state.cConsumed);
+    const r_fat  = Math.max(0, 65  - state.fConsumed);
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 20000);
+      const r = await fetch(API_URL + '/api/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          remaining_kcal: r_kcal, remaining_protein: r_prot,
+          remaining_carbs: r_carb, remaining_fat: r_fat,
+          hour: new Date().getHours(),
+        }),
+        signal: ctrl.signal,
+      });
+      clearTimeout(t);
+      if (!r.ok) return null;
+      return await r.json();
+    } catch (e) { return null; }
+  }
+
+  async function callWeeklySummary() {
+    if (!API_URL) return null;
+    const goal = state.dailyGoal || 0;
+    const history = state.history || [];
+    const totalKcal = history.reduce((a, h) => a + (h.kcal || 0), 0);
+    const days = history.filter((h) => h.kcal > 0).length;
+    const avg = days > 0 ? Math.round(totalKcal / days) : 0;
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 25000);
+      const r = await fetch(API_URL + '/api/weekly-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          history, avg_kcal: avg, goal_kcal: goal, streak: state.streak || 0,
+        }),
+        signal: ctrl.signal,
+      });
+      clearTimeout(t);
+      if (!r.ok) return null;
+      return await r.json();
     } catch (e) { return null; }
   }
 
@@ -587,6 +664,38 @@
     if (hint) hint.textContent = m === 'signup' ? 'หลังสมัคร อาจต้องยืนยันอีเมลก่อนใช้งาน' : 'ลืมรหัส? ติดต่อทีม dev';
   }
 
+  // ============================================
+  // Package C: AI Premium actions
+  // ============================================
+  async function fetchRecommend() {
+    if (state.recommendBusy) return;
+    setState({ recommendBusy: true });
+    const result = await callRecommend();
+    setState({ recommendBusy: false, recommend: result || { name: 'อกไก่ย่างกับสลัด', kcal: 350, reason: 'ตัวเลือกเริ่มต้น (AI ไม่พร้อมตอนนี้)', meal_type: 'มื้อ' } });
+  }
+  async function fetchWeeklySummary() {
+    if (state.summaryBusy) return;
+    setState({ summaryBusy: true });
+    const result = await callWeeklySummary();
+    setState({ summaryBusy: false, weeklySummary: result || { summary: 'ไม่สามารถสรุปได้ตอนนี้', tips: [], warnings: [] } });
+  }
+  function openEdit() {
+    if (!state.resultFood) return;
+    setState({ editOpen: true, editFood: { ...state.resultFood } });
+  }
+  function closeEdit() { setState({ editOpen: false, editFood: null }); }
+  function updateEditField(field, val) {
+    if (!state.editFood) return;
+    const n = parseInt(val, 10);
+    const v = Number.isFinite(n) ? Math.max(0, Math.min(99999, n)) : 0;
+    setState({ editFood: { ...state.editFood, [field]: v } });
+  }
+  function saveEdit() {
+    if (!state.editFood) return;
+    setState({ resultFood: { ...state.editFood, confidence: 100 }, editOpen: false, editFood: null });
+    showToast('แก้ไขค่าแล้ว', 'success');
+  }
+
   function downloadCSV() {
     const header = 'date,meal,name,kcal,protein,carbs,fat';
     const rows = state.meals.map((m) =>
@@ -644,7 +753,17 @@
       blob = await captureVideoFrame();
     } else if (mode === 'food' || mode === 'label') {
       blob = await captureVideoFrame();
-      if (blob && API_URL) food = await callRealAPI(blob, mode);
+      if (blob) {
+        const hash = await hashBlob(blob);
+        const cached = cacheGet(hash);
+        if (cached) {
+          food = cached;
+          showToast('ใช้ผลที่ cache ไว้ (ประหยัด quota)', 'info');
+        } else if (API_URL) {
+          food = await callRealAPI(blob, mode);
+          if (food) cacheSet(hash, food);
+        }
+      }
     }
 
     if (!food) {
@@ -722,8 +841,16 @@
     setState({ scanStage:'analyzing' });
     const mode = state.activeMode;
     let food = null;
-    if ((mode === 'food' || mode === 'label') && API_URL) {
-      food = await callRealAPI(file, mode);
+    if (mode === 'food' || mode === 'label') {
+      const hash = await hashBlob(file);
+      const cached = cacheGet(hash);
+      if (cached) {
+        food = cached;
+        showToast('ใช้ผลที่ cache ไว้ (ประหยัด quota)', 'info');
+      } else if (API_URL) {
+        food = await callRealAPI(file, mode);
+        if (food) cacheSet(hash, food);
+      }
     }
     if (!food) {
       await new Promise((r) => setTimeout(r, API_URL ? 200 : 1500));
@@ -787,6 +914,8 @@
     toggleDarkMode, downloadCSV, dismissToast,
     authSignUp, authSignIn, authSignOut, setAuthMode,
     pullFromCloud,
+    fetchRecommend, fetchWeeklySummary,
+    openEdit, closeEdit, updateEditField, saveEdit,
   };
 
   // ---------- HOME ----------
@@ -911,6 +1040,30 @@
           <button onclick="__ns.addWater(500)" style="padding:9px 0;border:1px solid #d8e9f5;background:#fff;border-radius:12px;font:700 12px 'IBM Plex Sans Thai';color:#1b4d8c;cursor:pointer;">+500</button>
           <button onclick="__ns.resetWater()" title="รีเซ็ตน้ำดื่ม" style="padding:9px 0;border:1px solid #f4d8d8;background:#fff;border-radius:12px;font:700 12px 'IBM Plex Sans Thai';color:#a04545;cursor:pointer;">รีเซ็ต</button>
         </div>
+      </div>
+
+      <div style="margin:16px 18px 0;background:linear-gradient(165deg,#fdf2dd,#fff);border:1px solid #f0e3c2;border-radius:24px;padding:18px;box-shadow:0 18px 40px -34px rgba(194,140,30,.35);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:18px;">🤖</span>
+            <div style="font:700 14px 'IBM Plex Sans Thai';color:#1b2722;">AI แนะนำมื้อต่อไป</div>
+          </div>
+          <button onclick="__ns.fetchRecommend()" ${v.recommendBusy ? 'disabled' : ''} style="background:#fff;border:1px solid #f0e3c2;border-radius:999px;padding:6px 12px;font:700 11px 'IBM Plex Sans Thai';color:#9c6b00;cursor:${v.recommendBusy ? 'wait' : 'pointer'};opacity:${v.recommendBusy ? .6 : 1};">${v.recommendBusy ? 'กำลังคิด...' : (v.recommend ? '↻ ใหม่' : '✨ ถาม AI')}</button>
+        </div>
+        ${v.recommend ? `
+          <div style="background:#fff;border:1px solid #f0e3c2;border-radius:14px;padding:14px;margin-top:8px;">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+              <div style="flex:1;min-width:0;">
+                <div style="font:700 15px 'IBM Plex Sans Thai';color:#1b2722;">${esc(v.recommend.name)}</div>
+                <div style="font:500 11.5px/1.5 'IBM Plex Sans Thai';color:#8a9890;margin-top:4px;">${esc(v.recommend.reason || '')}</div>
+              </div>
+              <div style="text-align:right;flex:none;">
+                <div style="font:800 18px 'Plus Jakarta Sans';color:#9c6b00;">${v.recommend.kcal}<span style="font:600 10px 'IBM Plex Sans Thai';color:#a4afa7;"> kcal</span></div>
+                ${v.recommend.meal_type ? `<div style="font:600 10px 'IBM Plex Sans Thai';color:#8a9890;margin-top:2px;">${esc(v.recommend.meal_type)}</div>` : ''}
+              </div>
+            </div>
+          </div>` : `
+          <div style="font:500 12px/1.6 'IBM Plex Sans Thai';color:#8a9890;">กดปุ่ม "ถาม AI" เพื่อให้ AI วิเคราะห์มาโครที่เหลือและแนะนำเมนูที่เหมาะกับช่วงเวลาตอนนี้</div>`}
       </div>
 
       ${v.earnedBadges.length > 0 ? `
@@ -1107,7 +1260,13 @@
         </div>
       </div>
 
-      <div style="margin:14px 18px 0;display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid #efe9da;border-radius:20px;padding:14px 16px;">
+      <div style="margin:14px 18px 0;display:flex;gap:9px;">
+        <button onclick="__ns.openEdit()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border-radius:14px;border:1px solid #e2ddcf;background:#fff;font:700 12.5px 'IBM Plex Sans Thai';color:#1b2722;cursor:pointer;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1b2722" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>แก้ไขค่า
+        </button>
+      </div>
+
+      <div style="margin:9px 18px 0;display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid #efe9da;border-radius:20px;padding:14px 16px;">
         <div>
           <div style="font:600 14px 'IBM Plex Sans Thai';color:#1b2722;">ปริมาณที่ทาน</div>
           <div style="font:500 12px 'IBM Plex Sans Thai';color:#8a9890;margin-top:2px;">หน่วยบริโภค</div>
@@ -1332,6 +1491,40 @@
     </nav>`;
   }
 
+  // ---------- EDIT RESULT OVERLAY ----------
+  function renderEditOverlay(v) {
+    if (!v.editOpen || !v.editFood) return '';
+    const f = v.editFood;
+    const row = (label, field, unit, val) => `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #f1ede1;">
+        <label style="font:600 13px 'IBM Plex Sans Thai';color:#1b2722;">${esc(label)}</label>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="number" min="0" max="9999" value="${val}" oninput="__ns.updateEditField('${field}', this.value)" style="width:80px;padding:8px 10px;border-radius:10px;border:1px solid #e2ddcf;background:#faf8f1;font:700 14px 'Plus Jakarta Sans';color:#1b2722;outline:none;text-align:center;">
+          <span style="font:600 11px 'IBM Plex Sans Thai';color:#8a9890;">${esc(unit)}</span>
+        </div>
+      </div>`;
+    return `
+    <div style="position:absolute;inset:0;z-index:55;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;animation:ns-fadeUp .25s both;">
+      <div style="background:#f4f1ea;border-radius:24px 24px 0 0;width:100%;max-height:88%;overflow-y:auto;padding:20px 22px 28px;box-shadow:0 -20px 50px rgba(0,0,0,.3);">
+        <div style="width:40px;height:4px;border-radius:2px;background:#d8d2c2;margin:0 auto 14px;"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div style="font:700 16px 'IBM Plex Sans Thai';color:#1b2722;">แก้ไขค่าโภชนาการ</div>
+          <button onclick="__ns.closeEdit()" style="width:34px;height:34px;border-radius:11px;border:1px solid #e2ddcf;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1b2722" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+          </button>
+        </div>
+        <div style="font:500 12px 'IBM Plex Sans Thai';color:#8a9890;margin-bottom:8px;">แก้ค่าถ้า AI วิเคราะห์ผิด (ค่าต่อ 1 หน่วยบริโภค)</div>
+        ${row('พลังงาน', 'kcal', 'kcal', f.kcal || 0)}
+        ${row('โปรตีน', 'protein', 'g', f.protein || 0)}
+        ${row('คาร์โบไฮเดรต', 'carbs', 'g', f.carbs || 0)}
+        ${row('ไขมัน', 'fat', 'g', f.fat || 0)}
+        ${row('น้ำตาล', 'sugar', 'g', f.sugar || 0)}
+        ${row('โซเดียม', 'sodium', 'mg', f.sodium || 0)}
+        <button onclick="__ns.saveEdit()" style="width:100%;margin-top:20px;padding:13px;border-radius:14px;border:none;background:var(--accent);color:#fff;font:700 14px 'IBM Plex Sans Thai';cursor:pointer;">บันทึกการแก้ไข</button>
+      </div>
+    </div>`;
+  }
+
   // ---------- SEARCH OVERLAY ----------
   function renderSearchOverlay(v) {
     if (!v.searchOpen) return '';
@@ -1400,7 +1593,32 @@
         <div style="width:42px;"></div>
       </header>
 
-      <div style="margin:8px 18px 0;background:linear-gradient(165deg,#fff,#fbfaf5);border:1px solid #efe9da;border-radius:24px;padding:20px;box-shadow:0 18px 40px -34px rgba(27,39,34,.4);">
+      <div style="margin:8px 18px 0;background:linear-gradient(165deg,#fdf2dd,#fff);border:1px solid #f0e3c2;border-radius:24px;padding:20px;box-shadow:0 18px 40px -34px rgba(194,140,30,.35);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:18px;">🤖</span>
+            <div style="font:700 14px 'IBM Plex Sans Thai';color:#1b2722;">AI สรุปสัปดาห์</div>
+          </div>
+          <button onclick="__ns.fetchWeeklySummary()" ${v.summaryBusy ? 'disabled' : ''} style="background:#fff;border:1px solid #f0e3c2;border-radius:999px;padding:6px 12px;font:700 11px 'IBM Plex Sans Thai';color:#9c6b00;cursor:${v.summaryBusy ? 'wait' : 'pointer'};opacity:${v.summaryBusy ? .6 : 1};">${v.summaryBusy ? 'กำลังคิด...' : (v.weeklySummary ? '↻ ใหม่' : '✨ ขอ AI สรุป')}</button>
+        </div>
+        ${v.weeklySummary ? `
+          <div style="font:500 12.5px/1.6 'IBM Plex Sans Thai';color:#1b2722;margin-top:6px;">${esc(v.weeklySummary.summary || '')}</div>
+          ${(v.weeklySummary.tips || []).length > 0 ? `
+          <div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0e3c2;">
+            <div style="font:700 11px 'IBM Plex Sans Thai';color:#9c6b00;margin-bottom:5px;">💡 คำแนะนำ</div>
+            ${v.weeklySummary.tips.map((t) => `<div style="font:500 11.5px/1.5 'IBM Plex Sans Thai';color:#56655d;margin-top:4px;">• ${esc(t)}</div>`).join('')}
+          </div>` : ''}
+          ${(v.weeklySummary.warnings || []).length > 0 ? `
+          <div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0e3c2;">
+            <div style="font:700 11px 'IBM Plex Sans Thai';color:#e85a4f;margin-bottom:5px;">⚠️ ข้อสังเกต</div>
+            ${v.weeklySummary.warnings.map((w) => `<div style="font:500 11.5px/1.5 'IBM Plex Sans Thai';color:#56655d;margin-top:4px;">• ${esc(w)}</div>`).join('')}
+          </div>` : ''}
+        ` : `
+          <div style="font:500 12px/1.6 'IBM Plex Sans Thai';color:#8a9890;">กดปุ่ม "ขอ AI สรุป" เพื่อให้ AI วิเคราะห์รูปแบบการกินอาหารใน 7 วันที่ผ่านมา และให้คำแนะนำส่วนตัว</div>
+        `}
+      </div>
+
+      <div style="margin:14px 18px 0;background:linear-gradient(165deg,#fff,#fbfaf5);border:1px solid #efe9da;border-radius:24px;padding:20px;box-shadow:0 18px 40px -34px rgba(27,39,34,.4);">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
           <div style="font:700 14px 'IBM Plex Sans Thai';color:#1b2722;">แคลอรี 7 วันล่าสุด</div>
           <div style="font:700 11px 'IBM Plex Sans Thai';color:var(--accent);background:var(--accent-soft);padding:5px 10px;border-radius:999px;">เฉลี่ย ${v.weekAvg} kcal/วัน</div>
@@ -1607,6 +1825,9 @@
       searchOpen: state.searchOpen, searchQuery: state.searchQuery, searchResults,
       darkMode: state.darkMode, toast: state.toast,
       user: state.user, syncing: state.syncing,
+      recommend: state.recommend, recommendBusy: state.recommendBusy,
+      weeklySummary: state.weeklySummary, summaryBusy: state.summaryBusy,
+      editOpen: state.editOpen, editFood: state.editFood,
       draft: state.settingsDraft || { userName, dailyGoal:goal, accent:state.accent, darkMode:state.darkMode },
       navHomeColor:   state.page === 'home'   ? accent : '#9aa8a0',
       navReportColor: state.page === 'report' ? accent : '#9aa8a0',
@@ -1641,7 +1862,7 @@
     if (state.page === 'settings') screen = renderSettings(v);
     if (state.page === 'report')   screen = renderReport(v);
     const showNav = state.page !== 'settings';
-    root.innerHTML = screen + renderSearchOverlay(v) + (showNav ? renderNav(v) : '') + renderToast(v);
+    root.innerHTML = screen + renderSearchOverlay(v) + renderEditOverlay(v) + (showNav ? renderNav(v) : '') + renderToast(v);
 
     if (focusId) {
       const next = document.getElementById(focusId);

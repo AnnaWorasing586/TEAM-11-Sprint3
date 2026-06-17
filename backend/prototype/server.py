@@ -172,7 +172,7 @@ def root():
         "service": "NutriScan AI Prototype Backend",
         "provider": provider or "none (set GEMINI_API_KEY or ANTHROPIC_API_KEY)",
         "model": GEMINI_MODEL if provider == "gemini" else CLAUDE_MODEL if provider == "anthropic" else None,
-        "endpoints": ["/api/scan/photo", "/api/scan/label", "/api/scan/barcode"],
+        "endpoints": ["/api/scan/photo", "/api/scan/label", "/api/scan/barcode", "/api/recommend", "/api/weekly-summary"],
     }
 
 
@@ -202,6 +202,107 @@ async def scan_label(image: UploadFile = File(...)):
 
 class BarcodeIn(BaseModel):
     barcode: str
+
+
+class RecommendIn(BaseModel):
+    remaining_kcal: int = 0
+    remaining_protein: int = 0
+    remaining_carbs: int = 0
+    remaining_fat: int = 0
+    hour: int = 12
+
+
+class WeeklySummaryIn(BaseModel):
+    history: list[dict] = []
+    avg_kcal: int = 0
+    goal_kcal: int = 0
+    streak: int = 0
+
+
+def _text_via_provider(prompt: str) -> str:
+    provider = active_provider()
+    if not provider:
+        raise HTTPException(503, "ตั้ง GEMINI_API_KEY หรือ ANTHROPIC_API_KEY ใน env ก่อน")
+    if provider == "gemini":
+        if genai is None:
+            raise HTTPException(503, "google-generativeai SDK not installed")
+        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+        model = genai.GenerativeModel(GEMINI_MODEL)
+        try:
+            resp = model.generate_content(prompt)
+        except Exception as exc:
+            raise HTTPException(502, f"Gemini API error: {exc}")
+        return resp.text or ""
+    if anthropic is None:
+        raise HTTPException(503, "anthropic SDK not installed")
+    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    try:
+        msg = client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=1024,
+            messages=[{"role": "user", "content": [{"type": "text", "text": prompt}]}],
+        )
+    except anthropic.APIError as exc:
+        raise HTTPException(502, f"Claude API error: {exc}")
+    return msg.content[0].text if msg.content else ""
+
+
+@app.post("/api/recommend")
+async def recommend(payload: RecommendIn):
+    """AI suggests a Thai meal that fits the user's remaining daily macros."""
+    hour = payload.hour
+    if   hour < 11: meal_type = "มื้อเช้า"
+    elif hour < 15: meal_type = "มื้อกลางวัน"
+    elif hour < 18: meal_type = "ของว่าง"
+    else:           meal_type = "มื้อเย็น"
+
+    prompt = (
+        f"ผู้ใช้แอปติดตามแคลอรี เหลือพลังงานวันนี้: {payload.remaining_kcal} kcal "
+        f"(โปรตีน {payload.remaining_protein}g · คาร์บ {payload.remaining_carbs}g · ไขมัน {payload.remaining_fat}g) · "
+        f"เวลาตอนนี้คือ{meal_type}\n"
+        "แนะนำเมนูอาหารไทย 1 จาน ที่เหมาะกับช่วงเวลาและพอดีกับมาโครที่เหลือ "
+        "ตอบเป็น JSON เท่านั้น (ไม่มี markdown):\n"
+        '{"name": "ชื่อเมนูภาษาไทย", "kcal": int, "reason": "เหตุผลสั้นๆ 1 บรรทัด ทำไมเหมาะ"}'
+    )
+    text = _text_via_provider(prompt)
+    try:
+        raw = extract_json(text)
+    except (ValueError, json.JSONDecodeError):
+        raise HTTPException(502, "failed to parse recommendation")
+    return {
+        "name": str(raw.get("name") or "อกไก่ย่างกับสลัด")[:60],
+        "kcal": max(0, min(2000, int(raw.get("kcal") or 0))),
+        "reason": str(raw.get("reason") or "เป็นตัวเลือกสุขภาพ")[:120],
+        "meal_type": meal_type,
+    }
+
+
+@app.post("/api/weekly-summary")
+async def weekly_summary(payload: WeeklySummaryIn):
+    """AI summarizes the user's 7-day eating pattern."""
+    if not payload.history:
+        return {"summary": "ยังไม่มีข้อมูลเพียงพอ — บันทึกมื้ออาหารเพื่อดูสรุปรายสัปดาห์", "tips": [], "warnings": []}
+
+    history_str = "\n".join(
+        f"- {h.get('date', '?')}: {h.get('kcal', 0)} kcal, {h.get('meals', 0)} มื้อ"
+        for h in payload.history[-7:]
+    )
+    prompt = (
+        f"ประวัติการกินอาหาร 7 วันล่าสุด:\n{history_str}\n"
+        f"เฉลี่ย {payload.avg_kcal} kcal/วัน · เป้าหมาย {payload.goal_kcal} kcal/วัน · streak {payload.streak} วัน\n\n"
+        "วิเคราะห์รูปแบบการกินและให้คำแนะนำสั้นๆ ตอบเป็น JSON (ไม่มี markdown):\n"
+        '{"summary": "สรุปภาพรวม 1-2 ประโยค", "tips": ["คำแนะนำสั้นๆ ข้อ 1", "คำแนะนำข้อ 2"], "warnings": ["ข้อสังเกตที่ควรระวัง ถ้ามี"]}'
+    )
+    text = _text_via_provider(prompt)
+    try:
+        raw = extract_json(text)
+    except (ValueError, json.JSONDecodeError):
+        raise HTTPException(502, "failed to parse summary")
+    return {
+        "summary": str(raw.get("summary") or "")[:300],
+        "tips": [str(t)[:160] for t in (raw.get("tips") or [])][:4],
+        "warnings": [str(w)[:160] for w in (raw.get("warnings") or [])][:3],
+    }
 
 
 @app.post("/api/scan/barcode")
