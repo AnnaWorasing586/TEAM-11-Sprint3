@@ -868,13 +868,23 @@
     if (!state.settingsDraft) return;
     const d = { ...state.settingsDraft };
     if (field === 'userName')  d.userName  = String(val).slice(0, 30);
-    if (field === 'dailyGoal') d.dailyGoal = clampGoal(val);
+    if (field === 'dailyGoal') d.dailyGoal = rawInt(val, 99999);
     if (field === 'accent' && ACCENTS[val]) d.accent = val;
-    if (field === 'weight')   d.weight   = clampNum(val, 0, 250);
-    if (field === 'height')   d.height   = clampNum(val, 0, 230);
+    if (field === 'weight')   d.weight   = rawFloat(val, 999);
+    if (field === 'height')   d.height   = rawFloat(val, 999);
     if (field === 'bodyGoal') d.bodyGoal = BODY_GOALS.includes(val) || val === '' ? val : d.bodyGoal;
     if (field === 'darkMode') d.darkMode = !!val;
     setState({ settingsDraft:d });
+  }
+  function rawInt(val, hardMax) {
+    const n = parseInt(val, 10);
+    if (!Number.isFinite(n) || n < 0) return 0;
+    return Math.min(hardMax, n);
+  }
+  function rawFloat(val, hardMax) {
+    const n = parseFloat(val);
+    if (!Number.isFinite(n) || n < 0) return 0;
+    return Math.min(hardMax, Math.round(n * 10) / 10);
   }
   function clampGoal(val) {
     const n = parseInt(val, 10);
@@ -892,10 +902,10 @@
     const name = (d.userName || '').trim() || 'ผู้ใช้';
     setState({
       userName:  name,
-      dailyGoal: d.dailyGoal,
+      dailyGoal: clampGoal(d.dailyGoal),
       accent:    d.accent,
-      weight:    d.weight,
-      height:    d.height,
+      weight:    clampNum(d.weight, 0, 250),
+      height:    clampNum(d.height, 0, 230),
       bodyGoal:  d.bodyGoal,
       darkMode:  !!d.darkMode,
       settingsDraft:null,
