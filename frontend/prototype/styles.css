@@ -68,31 +68,13 @@
     }
   }
 
-  /* 💻 Standard desktop / notebooks (1101–1399px) — scale the phone frame up 1.15× */
-  @media (min-width: 1101px) and (min-height: 850px) {
-    .ns-wrap { padding: 48px !important; }
+  /* 💻 Desktop / notebooks (≥ 1101px) — clean centered phone frame, original design */
+  @media (min-width: 1101px) and (min-height: 821px) {
+    .ns-wrap { padding: 32px !important; }
     #app-root {
-      width: 460px !important;
-      height: min(920px, 100dvh - 96px) !important;
-      transform: scale(1.15);
-      transform-origin: center center;
+      width: 440px !important;
+      height: min(900px, 100dvh - 64px) !important;
     }
-  }
-
-  /* 🖥 Medium desktop (1400–1699px) — scale 1.25× */
-  @media (min-width: 1400px) and (min-height: 900px) {
-    #app-root {
-      transform: scale(1.25);
-    }
-    .ns-blob { transform: scale(1.3); }
-  }
-
-  /* 🖥 Large desktop (≥ 1700px) — scale 1.35×, blob art larger */
-  @media (min-width: 1700px) and (min-height: 950px) {
-    #app-root {
-      transform: scale(1.35);
-    }
-    .ns-blob { transform: scale(1.5); }
   }
 
   /* Avoid horizontal scroll on any tablet/desktop */
