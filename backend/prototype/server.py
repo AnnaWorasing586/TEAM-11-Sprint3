@@ -172,7 +172,7 @@ def root():
         "service": "NutriScan AI Prototype Backend",
         "provider": provider or "none (set GEMINI_API_KEY or ANTHROPIC_API_KEY)",
         "model": GEMINI_MODEL if provider == "gemini" else CLAUDE_MODEL if provider == "anthropic" else None,
-        "endpoints": ["/api/scan/photo", "/api/scan/label", "/api/scan/barcode", "/api/recommend", "/api/weekly-summary"],
+        "endpoints": ["/api/scan/photo", "/api/scan/label", "/api/scan/barcode", "/api/recommend", "/api/weekly-summary", "/api/health-advice"],
     }
 
 
@@ -210,6 +210,21 @@ class RecommendIn(BaseModel):
     remaining_carbs: int = 0
     remaining_fat: int = 0
     hour: int = 12
+
+
+class HealthAdviceIn(BaseModel):
+    food_name: str = ""
+    kcal: int = 0
+    sugar_g: int = 0
+    sodium_mg: int = 0
+    rule_verdict: str = "yellow"
+    user_name: str = ""
+    bmi: float = 0
+    weight: float = 0
+    height: float = 0
+    body_goal: str = ""
+    consumed_today: int = 0
+    daily_goal: int = 0
 
 
 class WeeklySummaryIn(BaseModel):
@@ -274,6 +289,46 @@ async def recommend(payload: RecommendIn):
         "kcal": max(0, min(2000, int(raw.get("kcal") or 0))),
         "reason": str(raw.get("reason") or "เป็นตัวเลือกสุขภาพ")[:120],
         "meal_type": meal_type,
+    }
+
+
+@app.post("/api/health-advice")
+async def health_advice(payload: HealthAdviceIn):
+    """AI gives personalized health context on top of the rule-based traffic light."""
+    verdict_label = {"green": "ทานได้ตามปกติ", "yellow": "ทานพอประมาณ", "red": "ควรหลีกเลี่ยง"}.get(payload.rule_verdict, "พอประมาณ")
+    bmi_note = ""
+    if payload.bmi > 0:
+        if payload.bmi < 18.5:
+            bmi_note = f"ผู้ใช้น้ำหนักต่ำกว่าเกณฑ์ (BMI {payload.bmi})"
+        elif payload.bmi >= 25:
+            bmi_note = f"ผู้ใช้น้ำหนักเกินเกณฑ์ (BMI {payload.bmi})"
+        else:
+            bmi_note = f"ผู้ใช้น้ำหนักปกติ (BMI {payload.bmi})"
+    goal_note = f"เป้าหมาย: {payload.body_goal}" if payload.body_goal else ""
+    daily_note = ""
+    if payload.daily_goal > 0:
+        remaining = payload.daily_goal - payload.consumed_today
+        daily_note = f"วันนี้กินไปแล้ว {payload.consumed_today}/{payload.daily_goal} kcal (เหลือ {remaining} kcal)"
+
+    prompt = (
+        f"อาหารที่สแกน: {payload.food_name}\n"
+        f"ค่าโภชนาการต่อหน่วยบริโภค: {payload.kcal} kcal · น้ำตาล {payload.sugar_g}g · โซเดียม {payload.sodium_mg}mg\n"
+        f"คำตัดสินจากเกณฑ์ทางการ (UK FSA / WHO): {verdict_label}\n"
+        f"{bmi_note}\n{goal_note}\n{daily_note}\n\n"
+        "ในฐานะนักโภชนาการ ให้คำแนะนำเฉพาะผู้ใช้คนนี้ — ตอบเป็น JSON เท่านั้น (ไม่ markdown):\n"
+        '{"headline": "ประโยคเดียวสรุปว่าควรกินอาหารนี้หรือไม่ + อ้างเหตุผลส่วนตัว",'
+        ' "reasons": ["เหตุผลข้อ 1 สั้น (อ้างอิงค่าโภชนาการหรือสภาพร่างกาย)", "เหตุผลข้อ 2"],'
+        ' "alternatives": ["ทางเลือกที่ดีกว่า 1", "ทางเลือกที่ดีกว่า 2"]}'
+    )
+    text = _text_via_provider(prompt)
+    try:
+        raw = extract_json(text)
+    except (ValueError, json.JSONDecodeError):
+        raise HTTPException(502, "failed to parse advice")
+    return {
+        "headline": str(raw.get("headline") or "")[:250],
+        "reasons": [str(r)[:200] for r in (raw.get("reasons") or [])][:4],
+        "alternatives": [str(a)[:120] for a in (raw.get("alternatives") or [])][:3],
     }
 
 

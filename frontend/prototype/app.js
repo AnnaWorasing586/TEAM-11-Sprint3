@@ -161,6 +161,8 @@
     editOpen: false,
     editFood: null,
     authOverlayOpen: false,
+    advice: null,
+    adviceBusy: false,
   };
 
   let scanTimer = null;
@@ -237,6 +239,37 @@
           remaining_kcal: r_kcal, remaining_protein: r_prot,
           remaining_carbs: r_carb, remaining_fat: r_fat,
           hour: new Date().getHours(),
+        }),
+        signal: ctrl.signal,
+      });
+      clearTimeout(t);
+      if (!r.ok) return null;
+      return await r.json();
+    } catch (e) { return null; }
+  }
+
+  async function callHealthAdvice(verdict) {
+    if (!API_URL) return null;
+    const f = state.resultFood, s = state.servings;
+    const bmi = (state.weight > 0 && state.height > 0)
+      ? +(state.weight / Math.pow(state.height / 100, 2)).toFixed(1) : 0;
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 25000);
+      const r = await fetch(API_URL + '/api/health-advice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          food_name: f.name,
+          kcal: Math.round(f.kcal * s),
+          sugar_g: Math.round(f.sugar * s),
+          sodium_mg: Math.round(f.sodium * s),
+          rule_verdict: verdict,
+          user_name: state.userName,
+          bmi, weight: state.weight, height: state.height,
+          body_goal: state.bodyGoal,
+          consumed_today: state.consumed,
+          daily_goal: state.dailyGoal,
         }),
         signal: ctrl.signal,
       });
@@ -672,6 +705,21 @@
   // ============================================
   // Package C: AI Premium actions
   // ============================================
+  async function fetchHealthAdvice() {
+    if (state.adviceBusy) return;
+    setState({ adviceBusy: true });
+    const f = state.resultFood, s = state.servings;
+    const sugarPerServ = f.sugar * s;
+    const sodiumPerServ = f.sodium * s;
+    const sugarL = sugarPerServ < 5 ? 'green' : sugarPerServ <= 15 ? 'yellow' : 'red';
+    const sodiumL = sodiumPerServ < 140 ? 'green' : sodiumPerServ <= 600 ? 'yellow' : 'red';
+    const rank = { green: 0, yellow: 1, red: 2 };
+    const verdict = rank[sugarL] >= rank[sodiumL] ? sugarL : sodiumL;
+    const result = await callHealthAdvice(verdict);
+    setState({ adviceBusy: false, advice: result || { headline: 'ขอคำแนะนำไม่สำเร็จ', reasons: [], alternatives: [] } });
+  }
+  function clearAdvice() { setState({ advice: null }); }
+
   async function fetchRecommend() {
     if (state.recommendBusy) return;
     setState({ recommendBusy: true });
@@ -786,7 +834,7 @@
     if (state.page !== 'scan') return;
     if (state.resultImage) URL.revokeObjectURL(state.resultImage);
     const imgUrl = blob ? URL.createObjectURL(blob) : null;
-    setState({ scanStage:'idle', resultFood:food, resultImage:imgUrl, servings:1, page:'result' });
+    setState({ scanStage:'idle', resultFood:food, resultImage:imgUrl, servings:1, page:'result', advice:null });
   }
   function saveResult() {
     const f = state.resultFood, s = state.servings;
@@ -870,7 +918,7 @@
     }
     if (state.resultImage) URL.revokeObjectURL(state.resultImage);
     const imgUrl = URL.createObjectURL(file);
-    setState({ scanStage:'idle', resultFood:food, resultImage:imgUrl, servings:1, page:'result' });
+    setState({ scanStage:'idle', resultFood:food, resultImage:imgUrl, servings:1, page:'result', advice:null });
   }
 
   function updateDraft(field, val) {
@@ -983,7 +1031,7 @@
     toggleDarkMode, downloadCSV, dismissToast,
     authSignUp, authSignIn, authSignOut, setAuthMode,
     pullFromCloud,
-    fetchRecommend, fetchWeeklySummary,
+    fetchRecommend, fetchWeeklySummary, fetchHealthAdvice, clearAdvice,
     openEdit, closeEdit, updateEditField, dragEdit, saveEdit,
     openAuthOverlay, closeAuthOverlay,
     dragGoal, dragNumeric, dragName, toggleDraftDark,
@@ -1355,7 +1403,26 @@
             <div style="font:800 18px 'Plus Jakarta Sans';color:#1b2722;margin-top:3px;">${v.sodiumValueMg}<span style="font:600 10px 'IBM Plex Sans Thai';color:#8a9890;"> mg</span></div>
           </div>
         </div>
-        <div style="font:500 10px/1.4 'IBM Plex Sans Thai';color:${v.healthMeta.text};opacity:.65;margin-top:9px;">เกณฑ์ต่อหน่วยบริโภค: <strong style="font-weight:700;">น้ำตาล</strong> น้อย &lt;5g · ปานกลาง 5–15g · สูง &gt;15g · <strong style="font-weight:700;">โซเดียม</strong> น้อย &lt;140mg · ปานกลาง 140–600mg · สูง &gt;600mg</div>
+        <div style="font:500 10px/1.4 'IBM Plex Sans Thai';color:${v.healthMeta.text};opacity:.65;margin-top:9px;">เกณฑ์ UK FSA / WHO ต่อหน่วยบริโภค: <strong style="font-weight:700;">น้ำตาล</strong> น้อย &lt;5g · ปานกลาง 5–15g · สูง &gt;15g · <strong style="font-weight:700;">โซเดียม</strong> น้อย &lt;140mg · ปานกลาง 140–600mg · สูง &gt;600mg</div>
+
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid ${v.healthMeta.border};">
+          ${v.advice ? `
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <div style="display:flex;align-items:center;gap:7px;">
+                <span style="font-size:14px;">🤖</span>
+                <span style="font:700 12px 'IBM Plex Sans Thai';color:${v.healthMeta.text};">AI วิเคราะห์เฉพาะคุณ</span>
+              </div>
+              <button onclick="__ns.clearAdvice()" title="ปิด" style="width:26px;height:26px;border-radius:8px;border:1px solid ${v.healthMeta.border};background:rgba(255,255,255,.6);cursor:pointer;font:700 12px 'Plus Jakarta Sans';color:${v.healthMeta.text};padding:0;">×</button>
+            </div>
+            <div style="font:600 12.5px/1.5 'IBM Plex Sans Thai';color:${v.healthMeta.text};">${esc(v.advice.headline || '')}</div>
+            ${(v.advice.reasons || []).length > 0 ? `<div style="margin-top:8px;">${v.advice.reasons.map((r) => `<div style="font:500 11.5px/1.5 'IBM Plex Sans Thai';color:${v.healthMeta.text};opacity:.85;margin-top:3px;">• ${esc(r)}</div>`).join('')}</div>` : ''}
+            ${(v.advice.alternatives || []).length > 0 ? `<div style="margin-top:10px;padding:9px 11px;border-radius:11px;background:rgba(255,255,255,.5);"><div style="font:700 10.5px 'IBM Plex Sans Thai';color:${v.healthMeta.text};margin-bottom:4px;">💡 ทางเลือกที่ดีกว่า</div>${v.advice.alternatives.map((a) => `<div style="font:500 11.5px/1.5 'IBM Plex Sans Thai';color:${v.healthMeta.text};margin-top:2px;">→ ${esc(a)}</div>`).join('')}</div>` : ''}
+          ` : `
+            <button onclick="__ns.fetchHealthAdvice()" ${v.adviceBusy ? 'disabled' : ''} style="width:100%;padding:11px;border-radius:14px;border:1px solid ${v.healthMeta.border};background:rgba(255,255,255,.55);color:${v.healthMeta.text};font:700 12.5px 'IBM Plex Sans Thai';cursor:${v.adviceBusy ? 'wait' : 'pointer'};opacity:${v.adviceBusy ? .6 : 1};display:flex;align-items:center;justify-content:center;gap:7px;">
+              <span>${v.adviceBusy ? '⏳' : '🤖'}</span> ${v.adviceBusy ? 'AI กำลังวิเคราะห์...' : 'ขอ AI วิเคราะห์เฉพาะคุณ'}
+            </button>
+          `}
+        </div>
       </div>
 
       <div style="margin:14px 18px 0;display:flex;gap:9px;">
@@ -1961,6 +2028,7 @@
       weeklySummary: state.weeklySummary, summaryBusy: state.summaryBusy,
       editOpen: state.editOpen, editFood: state.editFood,
       authOverlayOpen: state.authOverlayOpen,
+      advice: state.advice, adviceBusy: state.adviceBusy,
       draft: state.settingsDraft || { userName, dailyGoal:goal, accent:state.accent, darkMode:state.darkMode },
       navHomeColor:   state.page === 'home'   ? accent : '#9aa8a0',
       navReportColor: state.page === 'report' ? accent : '#9aa8a0',
