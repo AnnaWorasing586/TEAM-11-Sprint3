@@ -879,7 +879,7 @@
   function clampGoal(val) {
     const n = parseInt(val, 10);
     if (!Number.isFinite(n) || n <= 0) return 0;
-    return Math.min(3500, Math.max(1200, n));
+    return Math.min(4000, Math.max(800, n));
   }
   function clampNum(val, lo, hi) {
     const n = parseFloat(val);
@@ -1393,11 +1393,12 @@
         <label style="display:block;font:600 12px 'IBM Plex Sans Thai';color:#56655d;margin-bottom:6px;">ชื่อที่แสดง</label>
         <input id="ns-input-name" type="text" value="${esc(d.userName)}" maxlength="30" oninput="__ns.updateDraft('userName', this.value)" style="width:100%;padding:13px 14px;border-radius:14px;border:1px solid #e2ddcf;background:#faf8f1;font:600 14px 'IBM Plex Sans Thai';color:#1b2722;outline:none;">
 
-        <label style="display:block;font:600 12px 'IBM Plex Sans Thai';color:#56655d;margin:18px 0 6px;">เป้าหมายแคลอรีต่อวัน (1200–3500 · 0 = ยังไม่ตั้ง)</label>
+        <label style="display:block;font:600 12px 'IBM Plex Sans Thai';color:#56655d;margin:18px 0 6px;">เป้าหมายแคลอรีต่อวัน <span style="font-weight:500;color:#8a9890;">(0 = ยังไม่ตั้ง)</span></label>
         <div style="display:flex;align-items:center;gap:12px;">
-          <input id="ns-input-goal" type="number" min="0" max="3500" step="50" value="${d.dailyGoal}" oninput="__ns.updateDraft('dailyGoal', this.value)" style="flex:none;width:110px;padding:13px 14px;border-radius:14px;border:1px solid #e2ddcf;background:#faf8f1;font:700 16px 'Plus Jakarta Sans';color:#1b2722;outline:none;text-align:center;">
-          <input type="range" min="0" max="3500" step="50" value="${d.dailyGoal}" oninput="__ns.updateDraft('dailyGoal', this.value)" style="flex:1;accent-color:${ACCENTS[d.accent][0]};">
+          <input id="ns-input-goal" type="number" min="0" max="4000" step="1" value="${d.dailyGoal}" oninput="__ns.updateDraft('dailyGoal', this.value)" style="flex:none;width:110px;padding:13px 14px;border-radius:14px;border:1px solid #e2ddcf;background:#faf8f1;font:700 16px 'Plus Jakarta Sans';color:#1b2722;outline:none;text-align:center;">
+          <input type="range" min="0" max="4000" step="10" value="${d.dailyGoal}" oninput="__ns.updateDraft('dailyGoal', this.value)" style="flex:1;accent-color:${ACCENTS[d.accent][0]};">
         </div>
+        <div style="font:500 11px/1.5 'IBM Plex Sans Thai';color:#8a9890;margin-top:6px;">พิมพ์เลขในช่องซ้ายเพื่อระบุค่าแม่นยำ (เช่น 1518) หรือลากแถบเพื่อปรับคร่าว ๆ<br><strong style="color:#56655d;font-weight:600;">ช่วงแนะนำ:</strong> ผู้ใหญ่ทั่วไป 1,200–3,500 kcal/วัน — ต่ำกว่า/สูงกว่านี้ควรปรึกษาแพทย์</div>
       </div>
 
       <div style="margin:14px 18px 0;background:#fff;border:1px solid #efe9da;border-radius:24px;padding:20px;box-shadow:0 18px 40px -36px rgba(27,39,34,.4);">
