@@ -136,7 +136,7 @@
     fConsumed: DAY.fConsumed || 0,
     water: DAY.water || 0,
     accent: PREFS.accent ?? 'green',
-    userName: PREFS.userName ?? 'พีรพล',
+    userName: PREFS.userName ?? 'ผู้ใช้',
     dailyGoal: PREFS.dailyGoal ?? 0,
     weight: PREFS.weight ?? 0,
     height: PREFS.height ?? 0,
@@ -905,7 +905,7 @@
   function cancelSettings() { setState({ settingsDraft:null, page:'home' }); }
   function resetPrefs() {
     try { localStorage.removeItem(PREFS_KEY); } catch (e) {}
-    const defaults = { userName:'พีรพล', dailyGoal:0, accent:'green', weight:0, height:0, bodyGoal:'' };
+    const defaults = { userName:'ผู้ใช้', dailyGoal:0, accent:'green', weight:0, height:0, bodyGoal:'' };
     setState({ ...defaults, settingsDraft:{ ...defaults } });
   }
 
