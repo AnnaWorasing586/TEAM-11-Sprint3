@@ -188,3 +188,19 @@
 
   /* On the BMI warning advisory card, keep red text readable */
   #app-root[data-theme="dark"] [style*="color:#ffb6ad"] { color: #ffb6ad !important; }
+
+  /* Traffic-light health card backgrounds (3 levels) */
+  #app-root[data-theme="dark"] [style*="linear-gradient(135deg,#e3f4ea,#c8eed4)"] {
+    background: linear-gradient(135deg,#1b2e25,#1c2326) !important;
+  }
+  #app-root[data-theme="dark"] [style*="linear-gradient(135deg,#ffeae3,#ffd1c4)"] {
+    background: linear-gradient(135deg,#2e1f1f,#1c2326) !important;
+  }
+  /* sub-cards inside the health card use rgba(255,255,255,.6) — flip to dark */
+  #app-root[data-theme="dark"] [style*="background:rgba(255,255,255,.6)"] {
+    background: rgba(28,35,38,.6) !important;
+  }
+  /* Text colors used by the health card */
+  #app-root[data-theme="dark"] [style*="color:#0e7042"] { color: #6ce4a8 !important; }
+  #app-root[data-theme="dark"] [style*="color:#b8392a"] { color: #ff9a8a !important; }
+  #app-root[data-theme="dark"] [style*="color:#c98700"] { color: #f5c563 !important; }

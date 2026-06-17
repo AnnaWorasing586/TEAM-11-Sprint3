@@ -1331,6 +1331,33 @@
         </div>
       </div>
 
+      <div style="margin:14px 18px 0;background:${v.healthMeta.bg};border:1px solid ${v.healthMeta.border};border-radius:20px;padding:16px;">
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <div style="width:46px;height:46px;border-radius:50%;background:${v.healthMeta.text};color:#fff;display:flex;align-items:center;justify-content:center;font:800 22px 'Plus Jakarta Sans';flex:none;box-shadow:0 8px 18px -8px ${v.healthMeta.text}cc;">${v.healthMeta.icon}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font:800 15px 'IBM Plex Sans Thai';color:${v.healthMeta.text};">${esc(v.healthMeta.label)}</div>
+            <div style="font:500 11.5px/1.45 'IBM Plex Sans Thai';color:${v.healthMeta.text};opacity:.85;margin-top:3px;">${esc(v.healthMeta.desc)}</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px;">
+          <div style="background:rgba(255,255,255,.6);border-radius:14px;padding:11px 12px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <span style="font:600 11px 'IBM Plex Sans Thai';color:#56655d;">น้ำตาล</span>
+              <span style="display:inline-flex;align-items:center;gap:4px;font:700 10.5px 'IBM Plex Sans Thai';color:${v.nutrientLevelColor(v.sugarLevel)};"><span style="width:8px;height:8px;border-radius:50%;background:${v.nutrientLevelColor(v.sugarLevel)};"></span>${esc(v.nutrientLevelLabel(v.sugarLevel))}</span>
+            </div>
+            <div style="font:800 18px 'Plus Jakarta Sans';color:#1b2722;margin-top:3px;">${v.sugarValueG}<span style="font:600 10px 'IBM Plex Sans Thai';color:#8a9890;"> g</span></div>
+          </div>
+          <div style="background:rgba(255,255,255,.6);border-radius:14px;padding:11px 12px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <span style="font:600 11px 'IBM Plex Sans Thai';color:#56655d;">โซเดียม</span>
+              <span style="display:inline-flex;align-items:center;gap:4px;font:700 10.5px 'IBM Plex Sans Thai';color:${v.nutrientLevelColor(v.sodiumLevel)};"><span style="width:8px;height:8px;border-radius:50%;background:${v.nutrientLevelColor(v.sodiumLevel)};"></span>${esc(v.nutrientLevelLabel(v.sodiumLevel))}</span>
+            </div>
+            <div style="font:800 18px 'Plus Jakarta Sans';color:#1b2722;margin-top:3px;">${v.sodiumValueMg}<span style="font:600 10px 'IBM Plex Sans Thai';color:#8a9890;"> mg</span></div>
+          </div>
+        </div>
+        <div style="font:500 10px/1.4 'IBM Plex Sans Thai';color:${v.healthMeta.text};opacity:.65;margin-top:9px;">เกณฑ์ต่อหน่วยบริโภค: <strong style="font-weight:700;">น้ำตาล</strong> น้อย &lt;5g · ปานกลาง 5–15g · สูง &gt;15g · <strong style="font-weight:700;">โซเดียม</strong> น้อย &lt;140mg · ปานกลาง 140–600mg · สูง &gt;600mg</div>
+      </div>
+
       <div style="margin:14px 18px 0;display:flex;gap:9px;">
         <button onclick="__ns.openEdit()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border-radius:14px;border:1px solid #e2ddcf;background:#fff;font:700 12.5px 'IBM Plex Sans Thai';color:#1b2722;cursor:pointer;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1b2722" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>แก้ไขค่า
@@ -1862,6 +1889,22 @@
 
     const f = state.resultFood, s = state.servings;
     const resultKcal = Math.round(f.kcal * s);
+
+    // Traffic-light health assessment (อิงเกณฑ์ UK FSA / WHO ต่อ 1 หน่วยบริโภค)
+    const sugarPerServ  = f.sugar  * s;
+    const sodiumPerServ = f.sodium * s;
+    const sugarLevel = sugarPerServ < 5 ? 'green' : sugarPerServ <= 15 ? 'yellow' : 'red';
+    const sodiumLevel = sodiumPerServ < 140 ? 'green' : sodiumPerServ <= 600 ? 'yellow' : 'red';
+    const levelRank = { green: 0, yellow: 1, red: 2 };
+    const overallLevel = [sugarLevel, sodiumLevel].reduce((a, b) => levelRank[a] >= levelRank[b] ? a : b);
+    const healthMeta = {
+      green:  { bg: 'linear-gradient(135deg,#e3f4ea,#c8eed4)', border: 'rgba(21,160,106,.25)', text: '#0e7042', icon: '✓', label: 'ทานได้ตามปกติ', desc: 'น้ำตาลและโซเดียมอยู่ในเกณฑ์ที่ปลอดภัยต่อสุขภาพ' },
+      yellow: { bg: 'linear-gradient(135deg,#fff5e6,#ffe8c8)', border: 'rgba(194,140,30,.25)', text: '#9c6b00', icon: '!',  label: 'ทานพอประมาณ', desc: 'มีน้ำตาลหรือโซเดียมปานกลาง อย่ารับประทานเกินจำเป็น' },
+      red:    { bg: 'linear-gradient(135deg,#ffeae3,#ffd1c4)', border: 'rgba(232,90,79,.3)',   text: '#b8392a', icon: '✕',  label: 'ควรหลีกเลี่ยง', desc: 'น้ำตาลหรือโซเดียมสูง — เสี่ยงต่อโรคเบาหวาน/ความดันโลหิตสูง' },
+    }[overallLevel];
+    const nutrientLevelColor = (lvl) => ({ green:'#15a06a', yellow:'#c98700', red:'#e85a4f' })[lvl];
+    const nutrientLevelLabel = (lvl) => ({ green:'น้อย', yellow:'ปานกลาง', red:'สูง' })[lvl];
+
     const nutrients = [
       { label:'โปรตีน',         unit:'g',  color:'#4c8dff', raw:f.protein*s, rec:120  },
       { label:'คาร์โบไฮเดรต', unit:'g',  color:'#f5a524', raw:f.carbs*s,   rec:250  },
@@ -1904,6 +1947,9 @@
       camLive, camHint,
       food:f, resultKcal:nf(resultKcal), confidence:f.confidence, goalSharePct, resultImage:state.resultImage,
       nutrients, servingLabel,
+      healthMeta, sugarLevel, sodiumLevel,
+      sugarValueG: Math.round(sugarPerServ), sodiumValueMg: Math.round(sodiumPerServ),
+      nutrientLevelColor, nutrientLevelLabel,
       water, waterPct, waterGoal: WATER_GOAL,
       streak: state.streak || 0,
       totalScans: state.totalScans || 0,
