@@ -56,17 +56,23 @@ app.add_middleware(
 
 SCHEMA = """ตอบเป็น JSON เท่านั้น (ไม่มี markdown / ข้อความอื่น) ตาม schema นี้:
 {
-  "name": "ชื่ออาหารเป็นภาษาไทย",
-  "tag": "ประเภท · ปริมาณ เช่น 'จานเดียว · 1 จาน'",
+  "name": "ชื่ออาหารเป็นภาษาไทย (ถ้าจำได้)",
+  "tag": "ประเภท · ปริมาณ เช่น 'จานเดียว · 1 จาน' หรือ 'เครื่องดื่ม · 1 แก้ว (200 มล.)'",
   "kcal": int (พลังงานรวมต่อ 1 หน่วยบริโภค),
   "protein": int (กรัม),
   "carbs": int (กรัม),
   "fat": int (กรัม),
   "sugar": int (กรัม),
   "sodium": int (มิลลิกรัม),
-  "confidence": int (ความมั่นใจ 0-100)
+  "confidence": int (ความมั่นใจ 0-100 ตอบตรง ๆ ไม่ต้องโม้)
 }
-ถ้าระบุชื่อเมนูไม่ได้ ตั้งเป็น "ผลิตภัณฑ์ที่สแกน" """
+
+กฎสำคัญ:
+- ค่าต้องเป็นตัวเลขจริง ไม่ใช่ตัวหนังสือ
+- ถ้าไม่มั่นใจในค่าใด ใส่ค่าประมาณที่ใกล้เคียงที่สุด ห้ามใส่ 0 ถ้าไม่ใช่ค่าจริง
+- confidence ตอบตามจริง: < 60 = ไม่ค่อยมั่นใจ, 60-80 = พอใช้, > 80 = มั่นใจดี
+- ถ้าระบุชื่อเมนูไม่ได้ ตั้งเป็น "ผลิตภัณฑ์ที่สแกน" + confidence < 50
+"""
 
 
 def extract_json(text: str) -> dict[str, Any]:
@@ -157,12 +163,19 @@ async def vision_scan(image_bytes: bytes, instruction: str) -> dict[str, Any]:
             detail="ตั้ง GEMINI_API_KEY หรือ ANTHROPIC_API_KEY ใน env ก่อน — ดู README",
         )
     prompt = f"{instruction}\n\n{SCHEMA}"
-    text = _gemini_call(image_bytes, prompt) if provider == "gemini" else _claude_call(image_bytes, prompt)
-    try:
-        raw = extract_json(text)
-    except (ValueError, json.JSONDecodeError) as exc:
-        raise HTTPException(status_code=502, detail=f"failed to parse model output: {exc}")
-    return normalize_food(raw)
+    call_fn = _gemini_call if provider == "gemini" else _claude_call
+
+    # Retry up to 2 times on JSON parse failures (transient model output noise)
+    last_err = None
+    for attempt in range(2):
+        text = call_fn(image_bytes, prompt)
+        try:
+            raw = extract_json(text)
+            return normalize_food(raw)
+        except (ValueError, json.JSONDecodeError) as exc:
+            last_err = exc
+            continue
+    raise HTTPException(status_code=502, detail=f"failed to parse model output after retry: {last_err}")
 
 
 @app.get("/")
@@ -186,7 +199,12 @@ async def scan_photo(image: UploadFile = File(...)):
     data = await image.read()
     return await vision_scan(
         data,
-        "วิเคราะห์อาหารในรูปนี้ ระบุชื่อเมนูภาษาไทย และประมาณการค่าโภชนาการต่อ 1 หน่วยบริโภค",
+        "วิเคราะห์อาหารในรูปนี้อย่างละเอียด:\n"
+        "1. ระบุชื่อเมนูเป็นภาษาไทย ถ้าเป็นอาหารไทยให้ใช้ชื่อไทยมาตรฐาน (เช่น 'ข้าวผัดกะเพราไก่ไข่ดาว' ไม่ใช่ 'Thai basil chicken')\n"
+        "2. ประมาณการค่าโภชนาการต่อ 1 หน่วยบริโภคจากขนาดและส่วนผสมที่เห็น\n"
+        "3. ถ้าเห็นหลายเมนูในรูปเดียว ให้รวมเป็นจานเดียวและตั้งชื่อรวม\n"
+        "4. ใช้ค่าโภชนาการอ้างอิงจากตำราโภชนาการอาหารไทย/INMU/USDA\n"
+        "ระวัง: ถ้าไม่ใช่อาหาร (เช่น คน, สิ่งของอื่น) ตอบ name='ไม่พบอาหาร' + confidence < 30",
     )
 
 
@@ -195,8 +213,14 @@ async def scan_label(image: UploadFile = File(...)):
     data = await image.read()
     return await vision_scan(
         data,
-        "อ่านข้อมูลโภชนาการจากฉลากในรูปนี้ ใช้ค่าตามที่ระบุในฉลากต่อ 1 หน่วยบริโภค "
-        "ถ้ามีชื่อผลิตภัณฑ์/แบรนด์ในรูป ใส่เป็น name ถ้าไม่มี ใส่ 'ผลิตภัณฑ์ที่สแกน'",
+        "อ่านฉลากโภชนาการ (Nutrition Facts) ในรูปนี้อย่างละเอียด:\n"
+        "1. **อ่านตัวเลขเป๊ะ ๆ จากตารางที่เขียนในฉลาก** ห้ามประมาณ ห้ามคำนวณเอง\n"
+        "2. ใช้ค่า 'ต่อ 1 หน่วยบริโภค' (ไม่ใช่ต่อทั้งซอง) ตามที่ระบุในฉลาก\n"
+        "3. ถ้ามีชื่อผลิตภัณฑ์ / แบรนด์ / โลโก้ในรูป ใส่เป็น name พร้อมแบรนด์\n"
+        "4. ถ้าฉลากเขียน 'น้อยกว่า 1g' หรือ '<0.5g' ให้ใส่ 0\n"
+        "5. ถ้าไม่ระบุ น้ำตาล/โซเดียม ในฉลาก ให้ใส่ค่าโภชนาการอ้างอิงสำหรับสินค้าประเภทนั้น\n"
+        "6. tag ควรระบุปริมาณต่อหน่วยบริโภค เช่น '1 แก้ว (200 มล.)' หรือ '1/3 กระป๋อง (30g)'\n"
+        "ถ้ารูปไม่ใช่ฉลากโภชนาการ (เช่น เป็นอาหาร) ให้ประมาณการเป็นอาหารแทน + confidence < 40",
     )
 
 

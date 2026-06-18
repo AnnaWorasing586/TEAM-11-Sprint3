@@ -197,12 +197,14 @@
     const video = document.getElementById('ns-cam');
     if (!video || !video.videoWidth) return Promise.resolve(null);
     const canvas = document.createElement('canvas');
-    const maxDim = 1280;
+    const maxDim = 1600;
     const scale = Math.min(1, maxDim / Math.max(video.videoWidth, video.videoHeight));
     canvas.width = Math.round(video.videoWidth * scale);
     canvas.height = Math.round(video.videoHeight * scale);
-    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-    return new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.85));
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    return new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.92));
   }
 
   async function callRealAPI(blobOrFile, mode) {
