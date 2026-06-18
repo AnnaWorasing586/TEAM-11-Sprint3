@@ -786,17 +786,68 @@
   }
   function clearAdvice() { setState({ advice: null }); }
 
+  function recommendCardInner(rec) {
+    if (!rec) {
+      return `<div style="font:500 12px/1.6 'IBM Plex Sans Thai';color:#8a9890;">กดปุ่ม "ถาม AI" เพื่อให้ AI วิเคราะห์มาโครที่เหลือและแนะนำเมนูที่เหมาะกับช่วงเวลาตอนนี้</div>`;
+    }
+    return `
+      <div style="background:#fff;border:1px solid #f0e3c2;border-radius:14px;padding:14px;margin-top:8px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font:700 15px 'IBM Plex Sans Thai';color:#1b2722;">${esc(rec.name)}</div>
+            <div style="font:500 11.5px/1.5 'IBM Plex Sans Thai';color:#8a9890;margin-top:4px;">${esc(rec.reason || '')}</div>
+          </div>
+          <div style="text-align:right;flex:none;">
+            <div style="font:800 18px 'Plus Jakarta Sans';color:#9c6b00;">${rec.kcal}<span style="font:600 10px 'IBM Plex Sans Thai';color:#a4afa7;"> kcal</span></div>
+            ${rec.meal_type ? `<div style="font:600 10px 'IBM Plex Sans Thai';color:#8a9890;margin-top:2px;">${esc(rec.meal_type)}</div>` : ''}
+          </div>
+        </div>
+      </div>`;
+  }
+  function summaryCardInner(sum) {
+    if (!sum) {
+      return `<div style="font:500 12px/1.6 'IBM Plex Sans Thai';color:#8a9890;">กดปุ่ม "ขอ AI สรุป" เพื่อให้ AI วิเคราะห์รูปแบบการกินอาหารใน 7 วันที่ผ่านมา และให้คำแนะนำส่วนตัว</div>`;
+    }
+    let html = `<div style="font:500 12.5px/1.6 'IBM Plex Sans Thai';color:#1b2722;margin-top:6px;">${esc(sum.summary || '')}</div>`;
+    if ((sum.tips || []).length > 0) {
+      html += `<div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0e3c2;"><div style="font:700 11px 'IBM Plex Sans Thai';color:#9c6b00;margin-bottom:5px;">💡 คำแนะนำ</div>${sum.tips.map((t) => `<div style="font:500 11.5px/1.5 'IBM Plex Sans Thai';color:#56655d;margin-top:4px;">• ${esc(t)}</div>`).join('')}</div>`;
+    }
+    if ((sum.warnings || []).length > 0) {
+      html += `<div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0e3c2;"><div style="font:700 11px 'IBM Plex Sans Thai';color:#e85a4f;margin-bottom:5px;">⚠️ ข้อสังเกต</div>${sum.warnings.map((w) => `<div style="font:500 11.5px/1.5 'IBM Plex Sans Thai';color:#56655d;margin-top:4px;">• ${esc(w)}</div>`).join('')}</div>`;
+    }
+    return html;
+  }
+
+  function setBusyButton(id, busy, doneText) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.disabled = busy;
+    btn.style.cursor = busy ? 'wait' : 'pointer';
+    btn.style.opacity = busy ? '.6' : '1';
+    btn.textContent = busy ? 'กำลังคิด...' : doneText;
+  }
+
   async function fetchRecommend() {
     if (state.recommendBusy) return;
-    setState({ recommendBusy: true });
+    state.recommendBusy = true;
+    setBusyButton('ns-rec-btn', true, '✨ ถาม AI');
     const result = await callRecommend();
-    setState({ recommendBusy: false, recommend: result || { name: 'อกไก่ย่างกับสลัด', kcal: 350, reason: 'ตัวเลือกเริ่มต้น (AI ไม่พร้อมตอนนี้)', meal_type: 'มื้อ' } });
+    state.recommendBusy = false;
+    state.recommend = result || { name: 'อกไก่ย่างกับสลัด', kcal: 350, reason: 'ตัวเลือกเริ่มต้น (AI ไม่พร้อมตอนนี้)', meal_type: 'มื้อ' };
+    setBusyButton('ns-rec-btn', false, '↻ ใหม่');
+    const card = document.getElementById('ns-rec-content');
+    if (card) card.innerHTML = recommendCardInner(state.recommend);
   }
   async function fetchWeeklySummary() {
     if (state.summaryBusy) return;
-    setState({ summaryBusy: true });
+    state.summaryBusy = true;
+    setBusyButton('ns-sum-btn', true, '✨ ขอ AI สรุป');
     const result = await callWeeklySummary();
-    setState({ summaryBusy: false, weeklySummary: result || { summary: 'ไม่สามารถสรุปได้ตอนนี้', tips: [], warnings: [] } });
+    state.summaryBusy = false;
+    state.weeklySummary = result || { summary: 'ไม่สามารถสรุปได้ตอนนี้', tips: [], warnings: [] };
+    setBusyButton('ns-sum-btn', false, '↻ ใหม่');
+    const card = document.getElementById('ns-sum-content');
+    if (card) card.innerHTML = summaryCardInner(state.weeklySummary);
   }
   function openEdit() {
     if (!state.resultFood) return;
@@ -1274,22 +1325,9 @@
             <span style="font-size:18px;">🤖</span>
             <div style="font:700 14px 'IBM Plex Sans Thai';color:#1b2722;">AI แนะนำมื้อต่อไป</div>
           </div>
-          <button onclick="__ns.fetchRecommend()" ${v.recommendBusy ? 'disabled' : ''} style="background:#fff;border:1px solid #f0e3c2;border-radius:999px;padding:6px 12px;font:700 11px 'IBM Plex Sans Thai';color:#9c6b00;cursor:${v.recommendBusy ? 'wait' : 'pointer'};opacity:${v.recommendBusy ? .6 : 1};">${v.recommendBusy ? 'กำลังคิด...' : (v.recommend ? '↻ ใหม่' : '✨ ถาม AI')}</button>
+          <button id="ns-rec-btn" onclick="__ns.fetchRecommend()" ${v.recommendBusy ? 'disabled' : ''} style="background:#fff;border:1px solid #f0e3c2;border-radius:999px;padding:6px 12px;font:700 11px 'IBM Plex Sans Thai';color:#9c6b00;cursor:${v.recommendBusy ? 'wait' : 'pointer'};opacity:${v.recommendBusy ? .6 : 1};">${v.recommendBusy ? 'กำลังคิด...' : (v.recommend ? '↻ ใหม่' : '✨ ถาม AI')}</button>
         </div>
-        ${v.recommend ? `
-          <div style="background:#fff;border:1px solid #f0e3c2;border-radius:14px;padding:14px;margin-top:8px;">
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
-              <div style="flex:1;min-width:0;">
-                <div style="font:700 15px 'IBM Plex Sans Thai';color:#1b2722;">${esc(v.recommend.name)}</div>
-                <div style="font:500 11.5px/1.5 'IBM Plex Sans Thai';color:#8a9890;margin-top:4px;">${esc(v.recommend.reason || '')}</div>
-              </div>
-              <div style="text-align:right;flex:none;">
-                <div style="font:800 18px 'Plus Jakarta Sans';color:#9c6b00;">${v.recommend.kcal}<span style="font:600 10px 'IBM Plex Sans Thai';color:#a4afa7;"> kcal</span></div>
-                ${v.recommend.meal_type ? `<div style="font:600 10px 'IBM Plex Sans Thai';color:#8a9890;margin-top:2px;">${esc(v.recommend.meal_type)}</div>` : ''}
-              </div>
-            </div>
-          </div>` : `
-          <div style="font:500 12px/1.6 'IBM Plex Sans Thai';color:#8a9890;">กดปุ่ม "ถาม AI" เพื่อให้ AI วิเคราะห์มาโครที่เหลือและแนะนำเมนูที่เหมาะกับช่วงเวลาตอนนี้</div>`}
+        <div id="ns-rec-content">${recommendCardInner(v.recommend)}</div>
       </div>
 
       ${v.earnedBadges.length > 0 ? `
@@ -1995,23 +2033,9 @@
             <span style="font-size:18px;">🤖</span>
             <div style="font:700 14px 'IBM Plex Sans Thai';color:#1b2722;">AI สรุปสัปดาห์</div>
           </div>
-          <button onclick="__ns.fetchWeeklySummary()" ${v.summaryBusy ? 'disabled' : ''} style="background:#fff;border:1px solid #f0e3c2;border-radius:999px;padding:6px 12px;font:700 11px 'IBM Plex Sans Thai';color:#9c6b00;cursor:${v.summaryBusy ? 'wait' : 'pointer'};opacity:${v.summaryBusy ? .6 : 1};">${v.summaryBusy ? 'กำลังคิด...' : (v.weeklySummary ? '↻ ใหม่' : '✨ ขอ AI สรุป')}</button>
+          <button id="ns-sum-btn" onclick="__ns.fetchWeeklySummary()" ${v.summaryBusy ? 'disabled' : ''} style="background:#fff;border:1px solid #f0e3c2;border-radius:999px;padding:6px 12px;font:700 11px 'IBM Plex Sans Thai';color:#9c6b00;cursor:${v.summaryBusy ? 'wait' : 'pointer'};opacity:${v.summaryBusy ? .6 : 1};">${v.summaryBusy ? 'กำลังคิด...' : (v.weeklySummary ? '↻ ใหม่' : '✨ ขอ AI สรุป')}</button>
         </div>
-        ${v.weeklySummary ? `
-          <div style="font:500 12.5px/1.6 'IBM Plex Sans Thai';color:#1b2722;margin-top:6px;">${esc(v.weeklySummary.summary || '')}</div>
-          ${(v.weeklySummary.tips || []).length > 0 ? `
-          <div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0e3c2;">
-            <div style="font:700 11px 'IBM Plex Sans Thai';color:#9c6b00;margin-bottom:5px;">💡 คำแนะนำ</div>
-            ${v.weeklySummary.tips.map((t) => `<div style="font:500 11.5px/1.5 'IBM Plex Sans Thai';color:#56655d;margin-top:4px;">• ${esc(t)}</div>`).join('')}
-          </div>` : ''}
-          ${(v.weeklySummary.warnings || []).length > 0 ? `
-          <div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0e3c2;">
-            <div style="font:700 11px 'IBM Plex Sans Thai';color:#e85a4f;margin-bottom:5px;">⚠️ ข้อสังเกต</div>
-            ${v.weeklySummary.warnings.map((w) => `<div style="font:500 11.5px/1.5 'IBM Plex Sans Thai';color:#56655d;margin-top:4px;">• ${esc(w)}</div>`).join('')}
-          </div>` : ''}
-        ` : `
-          <div style="font:500 12px/1.6 'IBM Plex Sans Thai';color:#8a9890;">กดปุ่ม "ขอ AI สรุป" เพื่อให้ AI วิเคราะห์รูปแบบการกินอาหารใน 7 วันที่ผ่านมา และให้คำแนะนำส่วนตัว</div>
-        `}
+        <div id="ns-sum-content">${summaryCardInner(v.weeklySummary)}</div>
       </div>
 
       <div style="margin:14px 18px 0;background:linear-gradient(165deg,#fff,#fbfaf5);border:1px solid #efe9da;border-radius:24px;padding:20px;box-shadow:0 18px 40px -34px rgba(27,39,34,.4);">
