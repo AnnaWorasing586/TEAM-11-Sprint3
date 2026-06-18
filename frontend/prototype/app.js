@@ -411,6 +411,38 @@
   }
   function resetWater() { setState({ water: 0 }); }
 
+  function dragWater(ml) {
+    const prev = state.water || 0;
+    const newW = Math.max(0, Math.min(5000, prev + ml));
+    if (newW === prev) return;
+    state.water = newW;
+    const valueEl = document.getElementById('ns-water-value');
+    const pctEl = document.getElementById('ns-water-pct');
+    const bigPctEl = document.getElementById('ns-water-big-pct');
+    const barEl = document.getElementById('ns-water-bar');
+    const pct = Math.min(100, Math.round(newW / WATER_GOAL * 100));
+    if (valueEl)   valueEl.textContent  = nf(newW) + ' / ' + nf(WATER_GOAL) + ' มล.';
+    if (pctEl)     pctEl.textContent    = pct;
+    if (bigPctEl)  bigPctEl.textContent = pct;
+    if (barEl)     barEl.style.width    = pct + '%';
+    saveDay(state);
+    if (state.user) pushWaterToCloud(ml);
+    if (newW >= WATER_GOAL && !state.badges.water_goal) checkBadges();
+  }
+  function dragResetWater() {
+    if ((state.water || 0) === 0) return;
+    state.water = 0;
+    const valueEl = document.getElementById('ns-water-value');
+    const pctEl = document.getElementById('ns-water-pct');
+    const bigPctEl = document.getElementById('ns-water-big-pct');
+    const barEl = document.getElementById('ns-water-bar');
+    if (valueEl)   valueEl.textContent  = '0 / ' + nf(WATER_GOAL) + ' มล.';
+    if (pctEl)     pctEl.textContent    = '0';
+    if (bigPctEl)  bigPctEl.textContent = '0';
+    if (barEl)     barEl.style.width    = '0%';
+    saveDay(state);
+  }
+
   const BADGE_DEFS = [
     { id: 'first_scan',  name: 'สแกนครั้งแรก',       icon: '🎯', check: (s) => s.totalScans >= 1 },
     { id: 'ten_scans',   name: 'สแกน 10 ครั้ง',         icon: '📸', check: (s) => s.totalScans >= 10 },
@@ -1074,7 +1106,7 @@
   window.__ns = {
     go, setMode, onCapture, changeServing, saveResult, setAccent,
     updateDraft, saveSettings, cancelSettings, resetPrefs, onFilePicked, deleteMeal,
-    addWater, resetWater,
+    addWater, resetWater, dragWater, dragResetWater,
     openSearch, closeSearch, updateSearchQuery, pickFromSearch,
     toggleDarkMode, downloadCSV, dismissToast,
     authSignUp, authSignIn, authSignOut, setAuthMode,
@@ -1194,19 +1226,19 @@
             <span style="width:36px;height:36px;border-radius:12px;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-size:18px;">💧</span>
             <div>
               <div style="font:700 14px 'IBM Plex Sans Thai';color:#1b2722;">น้ำดื่มวันนี้</div>
-              <div style="font:600 11px 'IBM Plex Sans Thai';color:#8a9890;margin-top:2px;">${nf(v.water)} / ${nf(v.waterGoal)} มล.</div>
+              <div id="ns-water-value" style="font:600 11px 'IBM Plex Sans Thai';color:#8a9890;margin-top:2px;">${nf(v.water)} / ${nf(v.waterGoal)} มล.</div>
             </div>
           </div>
-          <div style="font:800 22px 'Plus Jakarta Sans';color:#4c8dff;">${v.waterPct}<span style="font:600 12px 'IBM Plex Sans Thai';color:#8a9890;">%</span></div>
+          <div style="font:800 22px 'Plus Jakarta Sans';color:#4c8dff;"><span id="ns-water-big-pct">${v.waterPct}</span><span style="font:600 12px 'IBM Plex Sans Thai';color:#8a9890;">%</span></div>
         </div>
         <div style="height:8px;border-radius:6px;background:#eaf0f7;margin-top:12px;overflow:hidden;">
-          <div style="height:100%;border-radius:6px;background:linear-gradient(90deg,#4c8dff,#7fb3ff);width:${v.waterPct}%;transition:width 1s cubic-bezier(.22,1,.36,1);"></div>
+          <div id="ns-water-bar" style="height:100%;border-radius:6px;background:linear-gradient(90deg,#4c8dff,#7fb3ff);width:${v.waterPct}%;transition:width .35s cubic-bezier(.22,1,.36,1);"></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:14px;">
-          <button onclick="__ns.addWater(100)" style="padding:9px 0;border:1px solid #d8e9f5;background:#fff;border-radius:12px;font:700 12px 'IBM Plex Sans Thai';color:#1b4d8c;cursor:pointer;">+100</button>
-          <button onclick="__ns.addWater(250)" style="padding:9px 0;border:1px solid #d8e9f5;background:#fff;border-radius:12px;font:700 12px 'IBM Plex Sans Thai';color:#1b4d8c;cursor:pointer;">+250</button>
-          <button onclick="__ns.addWater(500)" style="padding:9px 0;border:1px solid #d8e9f5;background:#fff;border-radius:12px;font:700 12px 'IBM Plex Sans Thai';color:#1b4d8c;cursor:pointer;">+500</button>
-          <button onclick="__ns.resetWater()" title="รีเซ็ตน้ำดื่ม" style="padding:9px 0;border:1px solid #f4d8d8;background:#fff;border-radius:12px;font:700 12px 'IBM Plex Sans Thai';color:#a04545;cursor:pointer;">รีเซ็ต</button>
+          <button onclick="__ns.dragWater(100)" style="padding:9px 0;border:1px solid #d8e9f5;background:#fff;border-radius:12px;font:700 12px 'IBM Plex Sans Thai';color:#1b4d8c;cursor:pointer;">+100</button>
+          <button onclick="__ns.dragWater(250)" style="padding:9px 0;border:1px solid #d8e9f5;background:#fff;border-radius:12px;font:700 12px 'IBM Plex Sans Thai';color:#1b4d8c;cursor:pointer;">+250</button>
+          <button onclick="__ns.dragWater(500)" style="padding:9px 0;border:1px solid #d8e9f5;background:#fff;border-radius:12px;font:700 12px 'IBM Plex Sans Thai';color:#1b4d8c;cursor:pointer;">+500</button>
+          <button onclick="__ns.dragResetWater()" title="รีเซ็ตน้ำดื่ม" style="padding:9px 0;border:1px solid #f4d8d8;background:#fff;border-radius:12px;font:700 12px 'IBM Plex Sans Thai';color:#a04545;cursor:pointer;">รีเซ็ต</button>
         </div>
       </div>
 
