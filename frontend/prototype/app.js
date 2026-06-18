@@ -105,6 +105,11 @@
   const DAY = loadDay() || {};
   const STATS = loadStats();
 
+  const ONBOARDED_KEY = 'nutriscan.onboarded.v1';
+  const isOnboarded = (() => {
+    try { return localStorage.getItem(ONBOARDED_KEY) === '1'; } catch (e) { return true; }
+  })();
+
   // ============================================
   // Supabase client (optional — works locally if not configured)
   // ============================================
@@ -124,7 +129,9 @@
   }
 
   const state = {
-    page: 'home',
+    page: isOnboarded ? 'home' : 'onboarding',
+    onboardStep: 0,
+    onboardDraft: { userName: '', weight: 0, height: 0, bodyGoal: '', dailyGoal: 0 },
     scanStage: 'idle',
     activeMode: 'food',
     servings: 1,
@@ -739,6 +746,42 @@
     setState({ editOpen: true, editFood: { ...state.resultFood } });
   }
   function openAuthOverlay()  { setState({ authOverlayOpen: true }); }
+
+  function onboardNext() {
+    if (state.onboardStep >= 3) {
+      finishOnboarding();
+      return;
+    }
+    setState({ onboardStep: state.onboardStep + 1 });
+  }
+  function onboardBack() {
+    if (state.onboardStep <= 0) return;
+    setState({ onboardStep: state.onboardStep - 1 });
+  }
+  function onboardSkip() { finishOnboarding(); }
+  function onboardSetField(field, val) {
+    if (!state.onboardDraft) return;
+    const d = state.onboardDraft;
+    if (field === 'userName')  d.userName  = String(val).slice(0, 30);
+    if (field === 'weight')    d.weight    = parseFloat(val) || 0;
+    if (field === 'height')    d.height    = parseFloat(val) || 0;
+    if (field === 'bodyGoal')  d.bodyGoal  = String(val);
+    if (field === 'dailyGoal') d.dailyGoal = parseInt(val, 10) || 0;
+  }
+  function finishOnboarding() {
+    const d = state.onboardDraft || {};
+    try { localStorage.setItem(ONBOARDED_KEY, '1'); } catch (e) {}
+    setState({
+      userName: (d.userName || '').trim() || 'ผู้ใช้',
+      weight: Math.min(250, Math.max(0, +d.weight || 0)),
+      height: Math.min(230, Math.max(0, +d.height || 0)),
+      bodyGoal: BODY_GOALS.includes(d.bodyGoal) ? d.bodyGoal : '',
+      dailyGoal: clampGoal(d.dailyGoal),
+      page: 'home',
+      onboardStep: 0,
+    });
+    showToast('ยินดีต้อนรับ! 🎉', 'success');
+  }
   function closeAuthOverlay() { setState({ authOverlayOpen: false }); }
   function closeEdit() { setState({ editOpen: false, editFood: null }); }
   function updateEditField(field, val) {
@@ -1034,6 +1077,7 @@
     authSignUp, authSignIn, authSignOut, setAuthMode,
     pullFromCloud,
     fetchRecommend, fetchWeeklySummary, fetchHealthAdvice, clearAdvice,
+    onboardNext, onboardBack, onboardSkip, onboardSetField, finishOnboarding,
     openEdit, closeEdit, updateEditField, dragEdit, saveEdit,
     openAuthOverlay, closeAuthOverlay,
     dragGoal, dragNumeric, dragName, toggleDraftDark,
@@ -1668,6 +1712,104 @@
     </nav>`;
   }
 
+  // ---------- ONBOARDING (first-time only) ----------
+  function renderOnboarding(v) {
+    const step = state.onboardStep || 0;
+    const d = state.onboardDraft || {};
+    const total = 4;
+    const dots = Array.from({ length: total }, (_, i) =>
+      `<span style="width:8px;height:8px;border-radius:50%;background:${i === step ? 'var(--accent)' : '#d8d2c2'};transition:background .2s;"></span>`
+    ).join('');
+
+    let content = '';
+    if (step === 0) {
+      content = `
+        <div style="text-align:center;padding:20px 10px 0;">
+          <div style="font-size:80px;margin-bottom:14px;">🥗</div>
+          <div style="font:800 28px/1.2 'IBM Plex Sans Thai';color:#1b2722;">ยินดีต้อนรับสู่<br>NutriScan AI</div>
+          <div style="font:500 14px/1.5 'IBM Plex Sans Thai';color:#56655d;margin-top:14px;">สแกนอาหารด้วย AI<br>วิเคราะห์โภชนาการเฉพาะตัวคุณ</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:11px;margin-top:30px;">
+          <div style="display:flex;align-items:center;gap:10px;font:600 13px 'IBM Plex Sans Thai';color:#1b2722;">
+            <span style="width:36px;height:36px;border-radius:11px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:18px;">📸</span>
+            สแกนรูปอาหาร / ฉลาก / บาร์โค้ด
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;font:600 13px 'IBM Plex Sans Thai';color:#1b2722;">
+            <span style="width:36px;height:36px;border-radius:11px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:18px;">🚦</span>
+            เห็นสีเขียว/เหลือง/แดง บอกความปลอดภัย
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;font:600 13px 'IBM Plex Sans Thai';color:#1b2722;">
+            <span style="width:36px;height:36px;border-radius:11px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:18px;">🤖</span>
+            AI ให้คำแนะนำเฉพาะตัวคุณ
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;font:600 13px 'IBM Plex Sans Thai';color:#1b2722;">
+            <span style="width:36px;height:36px;border-radius:11px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:18px;">📊</span>
+            ติดตามมาโคร + น้ำดื่ม + streak ทุกวัน
+          </div>
+        </div>`;
+    } else if (step === 1) {
+      content = `
+        <div style="text-align:center;padding:10px 0 0;">
+          <div style="font-size:60px;margin-bottom:10px;">👤</div>
+          <div style="font:800 22px 'IBM Plex Sans Thai';color:#1b2722;">เริ่มจาก เรียกคุณว่าอะไรดี?</div>
+        </div>
+        <input id="ns-onboard-name" type="text" value="${esc(d.userName || '')}" oninput="__ns.onboardSetField('userName', this.value)" placeholder="ชื่อเล่นของคุณ" maxlength="30" autofocus style="width:100%;margin-top:24px;padding:15px 16px;border-radius:14px;border:1px solid #e2ddcf;background:#faf8f1;font:600 16px 'IBM Plex Sans Thai';color:#1b2722;outline:none;text-align:center;">
+        <div style="font:500 12px/1.5 'IBM Plex Sans Thai';color:#8a9890;margin-top:11px;text-align:center;">ใช้เรียกในแอป ปรับเปลี่ยนทีหลังได้ใน Settings</div>`;
+    } else if (step === 2) {
+      content = `
+        <div style="text-align:center;padding:10px 0 0;">
+          <div style="font-size:60px;margin-bottom:10px;">💪</div>
+          <div style="font:800 22px 'IBM Plex Sans Thai';color:#1b2722;">ข้อมูลร่างกาย</div>
+          <div style="font:500 12.5px 'IBM Plex Sans Thai';color:#8a9890;margin-top:5px;">ใช้คำนวณ TDEE + BMI</div>
+        </div>
+        <div style="display:flex;gap:11px;margin-top:24px;">
+          <div style="flex:1;">
+            <label style="display:block;font:600 12px 'IBM Plex Sans Thai';color:#56655d;margin-bottom:6px;">น้ำหนัก (กก.)</label>
+            <input id="ns-onboard-weight" type="number" min="0" max="250" step="0.1" value="${d.weight || ''}" oninput="__ns.onboardSetField('weight', this.value)" placeholder="60" style="width:100%;padding:13px 14px;border-radius:13px;border:1px solid #e2ddcf;background:#faf8f1;font:700 16px 'Plus Jakarta Sans';color:#1b2722;outline:none;text-align:center;">
+          </div>
+          <div style="flex:1;">
+            <label style="display:block;font:600 12px 'IBM Plex Sans Thai';color:#56655d;margin-bottom:6px;">ส่วนสูง (ซม.)</label>
+            <input id="ns-onboard-height" type="number" min="0" max="230" step="1" value="${d.height || ''}" oninput="__ns.onboardSetField('height', this.value)" placeholder="165" style="width:100%;padding:13px 14px;border-radius:13px;border:1px solid #e2ddcf;background:#faf8f1;font:700 16px 'Plus Jakarta Sans';color:#1b2722;outline:none;text-align:center;">
+          </div>
+        </div>
+        <div style="font:500 11px/1.5 'IBM Plex Sans Thai';color:#8a9890;margin-top:11px;text-align:center;">ไม่อยากกรอกก็ได้ — กดข้ามได้</div>`;
+    } else if (step === 3) {
+      content = `
+        <div style="text-align:center;padding:10px 0 0;">
+          <div style="font-size:60px;margin-bottom:10px;">🎯</div>
+          <div style="font:800 22px 'IBM Plex Sans Thai';color:#1b2722;">เป้าหมายของคุณ</div>
+          <div style="font:500 12.5px 'IBM Plex Sans Thai';color:#8a9890;margin-top:5px;">เลือกหนึ่งอย่าง</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:24px;">
+          ${['', 'ลดน้ำหนัก', 'รักษาน้ำหนัก', 'เพิ่มกล้ามเนื้อ'].map((g) => {
+            const on = (d.bodyGoal || '') === g;
+            const lbl = g === '' ? 'ยังไม่ตั้ง' : g;
+            return `<button onclick="__ns.onboardSetField('bodyGoal','${g}');__ns.go(state.page);" style="padding:14px 8px;border-radius:14px;border:2px solid ${on ? 'var(--accent)' : '#efe9da'};background:${on ? 'var(--accent-soft)' : '#fff'};color:${on ? 'var(--accent)' : '#1b2722'};font:700 13px 'IBM Plex Sans Thai';cursor:pointer;">${lbl}</button>`;
+          }).join('')}
+        </div>
+        <label style="display:block;font:600 12px 'IBM Plex Sans Thai';color:#56655d;margin:20px 0 6px;">เป้าหมายแคลอรี/วัน (พิมพ์เลขใด ๆ ก็ได้)</label>
+        <input id="ns-onboard-goal" type="number" min="0" max="4000" step="1" value="${d.dailyGoal || ''}" oninput="__ns.onboardSetField('dailyGoal', this.value)" placeholder="เช่น 1500 (กดข้ามถ้ายังไม่แน่ใจ)" style="width:100%;padding:13px 14px;border-radius:13px;border:1px solid #e2ddcf;background:#faf8f1;font:700 16px 'Plus Jakarta Sans';color:#1b2722;outline:none;text-align:center;">`;
+    }
+
+    const isLast = step === total - 1;
+    return `
+    <section class="${v.screenAnim ? 'ns-screen' : ''}" style="height:100%;overflow-y:auto;background:linear-gradient(165deg,#fff,#fbfaf5);padding:34px 24px 28px;display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+        <div style="display:flex;gap:6px;align-items:center;">${dots}</div>
+        ${step > 0 ? `<button onclick="__ns.onboardSkip()" style="background:none;border:none;font:600 12.5px 'IBM Plex Sans Thai';color:#8a9890;cursor:pointer;padding:6px 10px;">ข้าม →</button>` : ''}
+      </div>
+      <div style="flex:1;">
+        ${content}
+      </div>
+      <div style="display:flex;gap:11px;margin-top:24px;">
+        ${step > 0 ? `<button onclick="__ns.onboardBack()" style="flex:1;height:52px;border-radius:15px;border:1px solid #e2ddcf;background:#fff;font:700 14px 'IBM Plex Sans Thai';color:#1b2722;cursor:pointer;">ย้อนกลับ</button>` : ''}
+        <button onclick="__ns.onboardNext()" style="flex:${step > 0 ? '2' : '1'};height:52px;border-radius:15px;border:none;background:var(--accent);color:#fff;font:700 15px 'IBM Plex Sans Thai';cursor:pointer;box-shadow:0 14px 28px -10px rgba(21,160,106,.6);display:flex;align-items:center;justify-content:center;gap:7px;">
+          ${isLast ? '🚀 เริ่มใช้งาน' : 'ถัดไป →'}
+        </button>
+      </div>
+    </section>`;
+  }
+
   // ---------- AUTH OVERLAY (from avatar button) ----------
   function renderAuthOverlay(v) {
     if (!v.authOverlayOpen) return '';
@@ -2075,7 +2217,8 @@
     if (state.page === 'result')   screen = renderResult(v);
     if (state.page === 'settings') screen = renderSettings(v);
     if (state.page === 'report')   screen = renderReport(v);
-    const showNav = state.page !== 'settings';
+    if (state.page === 'onboarding') screen = renderOnboarding(v);
+    const showNav = state.page !== 'settings' && state.page !== 'onboarding';
     root.innerHTML = screen + renderSearchOverlay(v) + renderEditOverlay(v) + renderAuthOverlay(v) + (showNav ? renderNav(v) : '') + renderToast(v);
 
     if (focusId) {
