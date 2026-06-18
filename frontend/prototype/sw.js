@@ -2,7 +2,7 @@
 // keeps rendering after first load even without network. API calls bypass
 // the cache so AI scans always hit the live backend.
 
-const CACHE = 'nutriscan-v2';
+const CACHE = 'nutriscan-v3';
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest', 'icon.svg'];
 
 self.addEventListener('install', (event) => {

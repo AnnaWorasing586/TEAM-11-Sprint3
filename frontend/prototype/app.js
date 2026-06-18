@@ -245,15 +245,23 @@
     } catch (e) { return null; }
   }
 
+  function isRejection(food) {
+    if (!food) return true;
+    if (typeof food.confidence === 'number' && food.confidence < 30) return true;
+    const n = String(food.name || '');
+    return /ไม่พบ|ไม่ชัด|ไม่ครบ|กรุณาสลับ|นี่คือฉลาก/i.test(n);
+  }
+
   // Auto-retry: ถ้า confidence ต่ำ ลองใหม่ 1 ครั้ง เก็บผลที่มั่นใจกว่า
   async function callWithRetry(blobOrFile, mode) {
     let best = await callRealAPI(blobOrFile, mode);
     if (!best) return null;
+    if (isRejection(best)) return null;
     if (best.confidence >= 70) return best;
     // confidence ต่ำ → ลองใหม่
     const second = await callRealAPI(blobOrFile, mode);
-    if (second && second.confidence > best.confidence) best = second;
-    return best;
+    if (second && !isRejection(second) && second.confidence > best.confidence) best = second;
+    return isRejection(best) ? null : best;
   }
 
   async function callRecommend() {
@@ -984,8 +992,13 @@
     }
 
     if (!food) {
-      await new Promise((r) => { scanTimer = setTimeout(r, API_URL ? 200 : 1900); });
       scanTimer = null;
+      if (state.page !== 'scan') return;
+      if (API_URL) {
+        setState({ scanStage:'idle' });
+        showToast('AI อ่านไม่ได้ — ลองถ่ายใหม่ในที่แสงดีและให้ฉลาก/อาหารชัดเจน', 'warn');
+        return;
+      }
       food = pickMock();
     }
     if (state.page !== 'scan') return;
@@ -1070,7 +1083,11 @@
       }
     }
     if (!food) {
-      await new Promise((r) => setTimeout(r, API_URL ? 200 : 1500));
+      if (API_URL) {
+        setState({ scanStage:'idle' });
+        showToast('AI อ่านไม่ได้ — ลองอัปโหลดรูปที่ชัดกว่านี้ หรือเลือกโหมดให้ตรงประเภท', 'warn');
+        return;
+      }
       food = pickMock();
     }
     if (state.resultImage) URL.revokeObjectURL(state.resultImage);
