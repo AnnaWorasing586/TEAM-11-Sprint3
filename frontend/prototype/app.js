@@ -765,8 +765,11 @@
     if (field === 'userName')  d.userName  = String(val).slice(0, 30);
     if (field === 'weight')    d.weight    = parseFloat(val) || 0;
     if (field === 'height')    d.height    = parseFloat(val) || 0;
-    if (field === 'bodyGoal')  d.bodyGoal  = String(val);
     if (field === 'dailyGoal') d.dailyGoal = parseInt(val, 10) || 0;
+  }
+  function onboardPickGoal(val) {
+    if (!state.onboardDraft) return;
+    setState({ onboardDraft: { ...state.onboardDraft, bodyGoal: String(val) } });
   }
   function finishOnboarding() {
     const d = state.onboardDraft || {};
@@ -1077,7 +1080,7 @@
     authSignUp, authSignIn, authSignOut, setAuthMode,
     pullFromCloud,
     fetchRecommend, fetchWeeklySummary, fetchHealthAdvice, clearAdvice,
-    onboardNext, onboardBack, onboardSkip, onboardSetField, finishOnboarding,
+    onboardNext, onboardBack, onboardSkip, onboardSetField, onboardPickGoal, finishOnboarding,
     openEdit, closeEdit, updateEditField, dragEdit, saveEdit,
     openAuthOverlay, closeAuthOverlay,
     dragGoal, dragNumeric, dragName, toggleDraftDark,
@@ -1784,7 +1787,7 @@
           ${['', 'ลดน้ำหนัก', 'รักษาน้ำหนัก', 'เพิ่มกล้ามเนื้อ'].map((g) => {
             const on = (d.bodyGoal || '') === g;
             const lbl = g === '' ? 'ยังไม่ตั้ง' : g;
-            return `<button onclick="__ns.onboardSetField('bodyGoal','${g}');__ns.go(state.page);" style="padding:14px 8px;border-radius:14px;border:2px solid ${on ? 'var(--accent)' : '#efe9da'};background:${on ? 'var(--accent-soft)' : '#fff'};color:${on ? 'var(--accent)' : '#1b2722'};font:700 13px 'IBM Plex Sans Thai';cursor:pointer;">${lbl}</button>`;
+            return `<button onclick="__ns.onboardPickGoal('${g}')" style="padding:14px 8px;border-radius:14px;border:2px solid ${on ? 'var(--accent)' : '#efe9da'};background:${on ? 'var(--accent-soft)' : '#fff'};color:${on ? 'var(--accent)' : '#1b2722'};font:700 13px 'IBM Plex Sans Thai';cursor:pointer;">${lbl}</button>`;
           }).join('')}
         </div>
         <label style="display:block;font:600 12px 'IBM Plex Sans Thai';color:#56655d;margin:20px 0 6px;">เป้าหมายแคลอรี/วัน (พิมพ์เลขใด ๆ ก็ได้)</label>
