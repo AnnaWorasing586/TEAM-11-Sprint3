@@ -32,7 +32,29 @@
   const DAY_KEY = 'nutriscan.day.v1';
   const STATS_KEY = 'nutriscan.stats.v1';
   const BODY_GOALS = ['ลดน้ำหนัก', 'รักษาน้ำหนัก', 'เพิ่มกล้ามเนื้อ'];
-  const WATER_GOAL = 2000;
+  const WATER_GOAL = 2000;  // fallback used when no weight is set in Settings
+
+  // 30 ml ต่อกิโลกรัม (อิงคำแนะนำกระทรวงสาธารณสุข), ปัดเป็นทวีคูณ 100 ml, จำกัด 1500–3500
+  function waterGoalFor(weight) {
+    if (!weight || weight <= 0) return WATER_GOAL;
+    const ml = Math.round(weight * 30 / 100) * 100;
+    return Math.max(1500, Math.min(3500, ml));
+  }
+
+  // ข้อความเตือน/ชม ตามเวลาในวัน + % ที่ดื่มไปแล้ว
+  function waterAdvice(amount, goal) {
+    const hour = new Date().getHours();
+    const pct = goal > 0 ? amount / goal : 0;
+    if (pct >= 1) return { msg: '🎉 ดื่มครบเป้าวันนี้แล้ว — สุดยอด!', tone: 'good' };
+    if (hour < 7) return { msg: '☀️ เริ่มวันด้วยน้ำ 1 แก้วก่อนนะ', tone: 'tip' };
+    // เป้าที่คาดว่าควรไปถึงตามชั่วโมง: 7am=0% → 9pm=100% (เชิงเส้น)
+    const expected = Math.max(0, Math.min(1, (hour - 7) / 14));
+    const expectedMl = Math.round(goal * expected / 100) * 100;
+    if (hour >= 21 && pct < 0.7) return { msg: '⚠️ จะนอนแล้ว — วันนี้ดื่มไป ' + Math.round(pct * 100) + '% ของเป้า', tone: 'warn' };
+    if (pct < expected - 0.15) return { msg: '💧 ตอนนี้ควรอยู่ที่ ~' + expectedMl + ' มล. — ลองดื่มเพิ่ม', tone: 'warn' };
+    if (pct < expected) return { msg: '💧 เกือบทันเป้าแล้ว ดื่มอีกนิด', tone: 'tip' };
+    return { msg: '✨ ดื่มน้ำได้ดีตามจังหวะวันนี้', tone: 'good' };
+  }
 
   const today = () => new Date().toISOString().slice(0, 10);
   const daysBetween = (a, b) => Math.round((new Date(b) - new Date(a)) / 86400000);
@@ -444,35 +466,48 @@
   }
   function resetWater() { setState({ water: 0 }); }
 
+  function updateWaterMsgEl(amount, goal) {
+    const msgEl = document.getElementById('ns-water-msg');
+    if (!msgEl) return;
+    const a = waterAdvice(amount, goal);
+    const colors = { good: '#1f7a4d', tip: '#1b4d8c', warn: '#a04545' };
+    msgEl.textContent = a.msg;
+    msgEl.style.color = colors[a.tone] || '#4c8dff';
+  }
+
   function dragWater(ml) {
     const prev = state.water || 0;
     const newW = Math.max(0, Math.min(5000, prev + ml));
     if (newW === prev) return;
     state.water = newW;
+    const goal = waterGoalFor(state.weight);
     const valueEl = document.getElementById('ns-water-value');
     const pctEl = document.getElementById('ns-water-pct');
     const bigPctEl = document.getElementById('ns-water-big-pct');
     const barEl = document.getElementById('ns-water-bar');
-    const pct = Math.min(100, Math.round(newW / WATER_GOAL * 100));
-    if (valueEl)   valueEl.textContent  = nf(newW) + ' / ' + nf(WATER_GOAL) + ' มล.';
+    const pct = Math.min(100, Math.round(newW / goal * 100));
+    if (valueEl)   valueEl.textContent  = nf(newW) + ' / ' + nf(goal) + ' มล.';
     if (pctEl)     pctEl.textContent    = pct;
     if (bigPctEl)  bigPctEl.textContent = pct;
     if (barEl)     barEl.style.width    = pct + '%';
+    updateWaterMsgEl(newW, goal);
     saveDay(state);
     if (state.user) pushWaterToCloud(ml);
-    if (newW >= WATER_GOAL && !state.badges.water_goal) checkBadges();
+    if (newW >= goal && !state.badges.water_goal) checkBadges();
   }
   function dragResetWater() {
     if ((state.water || 0) === 0) return;
     state.water = 0;
+    const goal = waterGoalFor(state.weight);
     const valueEl = document.getElementById('ns-water-value');
     const pctEl = document.getElementById('ns-water-pct');
     const bigPctEl = document.getElementById('ns-water-big-pct');
     const barEl = document.getElementById('ns-water-bar');
-    if (valueEl)   valueEl.textContent  = '0 / ' + nf(WATER_GOAL) + ' มล.';
+    if (valueEl)   valueEl.textContent  = '0 / ' + nf(goal) + ' มล.';
     if (pctEl)     pctEl.textContent    = '0';
     if (bigPctEl)  bigPctEl.textContent = '0';
     if (barEl)     barEl.style.width    = '0%';
+    updateWaterMsgEl(0, goal);
     saveDay(state);
   }
 
@@ -482,7 +517,7 @@
     { id: 'streak_3',    name: 'บันทึก 3 วันติด',       icon: '🔥', check: (s) => s.streak >= 3 },
     { id: 'streak_7',    name: 'บันทึก 7 วันติด',       icon: '⚡', check: (s) => s.streak >= 7 },
     { id: 'streak_30',   name: 'บันทึก 30 วันติด',      icon: '👑', check: (s) => s.streak >= 30 },
-    { id: 'water_goal',  name: 'ดื่มน้ำครบ 2L',         icon: '💧', check: (s) => s.water >= WATER_GOAL },
+    { id: 'water_goal',  name: 'ดื่มน้ำครบเป้าวันนี้',   icon: '💧', check: (s) => s.water >= waterGoalFor(s.weight) },
     { id: 'three_meals', name: 'บันทึก 3 มื้อในวัน',   icon: '🍽️', check: (s) => s.meals.length >= 3 },
   ];
 
@@ -1328,6 +1363,7 @@
         <div style="height:8px;border-radius:6px;background:#eaf0f7;margin-top:12px;overflow:hidden;">
           <div id="ns-water-bar" style="height:100%;border-radius:6px;background:linear-gradient(90deg,#4c8dff,#7fb3ff);width:${v.waterPct}%;transition:width .35s cubic-bezier(.22,1,.36,1);"></div>
         </div>
+        <div id="ns-water-msg" style="margin-top:10px;font:600 12px 'IBM Plex Sans Thai';color:${v.waterMsg.tone === 'good' ? '#1f7a4d' : v.waterMsg.tone === 'warn' ? '#a04545' : '#1b4d8c'};">${esc(v.waterMsg.msg)}</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:14px;">
           <button onclick="__ns.dragWater(100)" style="padding:9px 0;border:1px solid #d8e9f5;background:#fff;border-radius:12px;font:700 12px 'IBM Plex Sans Thai';color:#1b4d8c;cursor:pointer;">+100</button>
           <button onclick="__ns.dragWater(250)" style="padding:9px 0;border:1px solid #d8e9f5;background:#fff;border-radius:12px;font:700 12px 'IBM Plex Sans Thai';color:#1b4d8c;cursor:pointer;">+250</button>
@@ -2250,7 +2286,9 @@
       : 'CAMERA FEED';
 
     const water = state.water || 0;
-    const waterPct = Math.min(100, Math.round(water / WATER_GOAL * 100));
+    const waterGoal = waterGoalFor(state.weight);
+    const waterPct = Math.min(100, Math.round(water / waterGoal * 100));
+    const waterMsg = waterAdvice(water, waterGoal);
 
     const earnedBadges = BADGE_DEFS.filter((b) => state.badges[b.id]);
     const lockedBadges = BADGE_DEFS.filter((b) => !state.badges[b.id]).slice(0, 3);
@@ -2274,7 +2312,7 @@
       healthMeta, sugarLevel, sodiumLevel,
       sugarValueG: Math.round(sugarPerServ), sodiumValueMg: Math.round(sodiumPerServ),
       nutrientLevelColor, nutrientLevelLabel,
-      water, waterPct, waterGoal: WATER_GOAL,
+      water, waterPct, waterGoal, waterMsg,
       streak: state.streak || 0,
       totalScans: state.totalScans || 0,
       earnedBadges, lockedBadges, allBadges: BADGE_DEFS, badgesEarned: state.badges,
