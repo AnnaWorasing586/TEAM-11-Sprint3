@@ -214,6 +214,20 @@
     return new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.92));
   }
 
+  // Multi-shot: ถ่าย 3 frame ห่างกัน 180ms เลือก blob ใหญ่สุด
+  // (ภาพชัดกว่า → JPEG เก็บรายละเอียดมากกว่า → ขนาด blob ใหญ่กว่า)
+  async function captureBestFrame() {
+    const frames = [];
+    for (let i = 0; i < 3; i++) {
+      const f = await captureVideoFrame();
+      if (f) frames.push(f);
+      if (i < 2) await new Promise((r) => setTimeout(r, 180));
+    }
+    if (!frames.length) return null;
+    frames.sort((a, b) => b.size - a.size);
+    return frames[0];
+  }
+
   async function callRealAPI(blobOrFile, mode) {
     if (!API_URL) return null;
     const endpoint = mode === 'label' ? '/api/scan/label' : '/api/scan/photo';
@@ -229,6 +243,17 @@
       if (!data || typeof data.kcal !== 'number') return null;
       return { ...data, confidence: data.confidence || 80 };
     } catch (e) { return null; }
+  }
+
+  // Auto-retry: ถ้า confidence ต่ำ ลองใหม่ 1 ครั้ง เก็บผลที่มั่นใจกว่า
+  async function callWithRetry(blobOrFile, mode) {
+    let best = await callRealAPI(blobOrFile, mode);
+    if (!best) return null;
+    if (best.confidence >= 70) return best;
+    // confidence ต่ำ → ลองใหม่
+    const second = await callRealAPI(blobOrFile, mode);
+    if (second && second.confidence > best.confidence) best = second;
+    return best;
   }
 
   async function callRecommend() {
@@ -892,7 +917,8 @@
       }
       blob = await captureVideoFrame();
     } else if (mode === 'food' || mode === 'label') {
-      blob = await captureVideoFrame();
+      // Multi-shot: ถ่าย 3 frame เลือก blob ใหญ่สุด (proxy ของความชัด)
+      blob = await captureBestFrame();
       if (blob) {
         const hash = await hashBlob(blob);
         const cached = cacheGet(hash);
@@ -900,7 +926,7 @@
           food = cached;
           showToast('ใช้ผลที่ cache ไว้ (ประหยัด quota)', 'info');
         } else if (API_URL) {
-          food = await callRealAPI(blob, mode);
+          food = await callWithRetry(blob, mode);
           if (food) cacheSet(hash, food);
         }
       }
@@ -988,7 +1014,7 @@
         food = cached;
         showToast('ใช้ผลที่ cache ไว้ (ประหยัด quota)', 'info');
       } else if (API_URL) {
-        food = await callRealAPI(file, mode);
+        food = await callWithRetry(file, mode);
         if (food) cacheSet(hash, food);
       }
     }
