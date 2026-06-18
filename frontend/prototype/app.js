@@ -1270,6 +1270,7 @@
             <span style="width:7px;height:7px;border-radius:50%;background:#9fe3bf;animation:ns-dots 1.3s .2s infinite;"></span>
             <span style="width:7px;height:7px;border-radius:50%;background:#9fe3bf;animation:ns-dots 1.3s .4s infinite;"></span>
           </div>
+          <div style="font:500 11px/1.5 'IBM Plex Sans Thai';color:#9aa8a0;margin-top:10px;padding:0 20px;">ครั้งแรกของวันอาจใช้เวลา 20–30 วินาที<br>(server ตื่นจาก idle)</div>
         </div>
       </div>` : '';
 
@@ -1383,6 +1384,7 @@
         <div style="display:flex;align-items:flex-start;gap:12px;">
           <div style="width:46px;height:46px;border-radius:50%;background:${v.healthMeta.text};color:#fff;display:flex;align-items:center;justify-content:center;font:800 22px 'Plus Jakarta Sans';flex:none;box-shadow:0 8px 18px -8px ${v.healthMeta.text}cc;">${v.healthMeta.icon}</div>
           <div style="flex:1;min-width:0;">
+            <div style="display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:999px;background:${v.healthMeta.text};color:#fff;font:700 10px 'IBM Plex Sans Thai';margin-bottom:5px;">🚦 ${v.sugarLevel === 'green' && v.sodiumLevel === 'green' ? 'สีเขียว = ปลอดภัย' : v.healthMeta.icon === '!' ? 'สีเหลือง = ระวัง' : 'สีแดง = หลีกเลี่ยง'}</div>
             <div style="font:800 15px 'IBM Plex Sans Thai';color:${v.healthMeta.text};">${esc(v.healthMeta.label)}</div>
             <div style="font:500 11.5px/1.45 'IBM Plex Sans Thai';color:${v.healthMeta.text};opacity:.85;margin-top:3px;">${esc(v.healthMeta.desc)}</div>
           </div>
@@ -1403,7 +1405,15 @@
             <div style="font:800 18px 'Plus Jakarta Sans';color:#1b2722;margin-top:3px;">${v.sodiumValueMg}<span style="font:600 10px 'IBM Plex Sans Thai';color:#8a9890;"> mg</span></div>
           </div>
         </div>
-        <div style="font:500 10px/1.4 'IBM Plex Sans Thai';color:${v.healthMeta.text};opacity:.65;margin-top:9px;">เกณฑ์ UK FSA / WHO ต่อหน่วยบริโภค: <strong style="font-weight:700;">น้ำตาล</strong> น้อย &lt;5g · ปานกลาง 5–15g · สูง &gt;15g · <strong style="font-weight:700;">โซเดียม</strong> น้อย &lt;140mg · ปานกลาง 140–600mg · สูง &gt;600mg</div>
+        <div style="margin-top:11px;padding:10px 11px;background:rgba(255,255,255,.55);border-radius:11px;">
+          <div style="font:700 10.5px 'IBM Plex Sans Thai';color:${v.healthMeta.text};margin-bottom:6px;">💡 ความหมายของสี</div>
+          <div style="display:flex;flex-direction:column;gap:4px;font:500 11px 'IBM Plex Sans Thai';color:${v.healthMeta.text};">
+            <div style="display:flex;align-items:center;gap:7px;"><span style="width:10px;height:10px;border-radius:50%;background:#15a06a;flex:none;"></span><strong style="font-weight:700;">เขียว</strong> = ปลอดภัย ทานได้ปกติ</div>
+            <div style="display:flex;align-items:center;gap:7px;"><span style="width:10px;height:10px;border-radius:50%;background:#c98700;flex:none;"></span><strong style="font-weight:700;">เหลือง</strong> = ระวัง ทานพอประมาณ</div>
+            <div style="display:flex;align-items:center;gap:7px;"><span style="width:10px;height:10px;border-radius:50%;background:#e85a4f;flex:none;"></span><strong style="font-weight:700;">แดง</strong> = หลีกเลี่ยง เสี่ยงเบาหวาน/ความดันสูง</div>
+          </div>
+        </div>
+        <div style="font:500 10px/1.4 'IBM Plex Sans Thai';color:${v.healthMeta.text};opacity:.65;margin-top:7px;">เกณฑ์ UK FSA / WHO ต่อหน่วยบริโภค: <strong style="font-weight:700;">น้ำตาล</strong> เขียว &lt;5g · เหลือง 5–15g · แดง &gt;15g · <strong style="font-weight:700;">โซเดียม</strong> เขียว &lt;140mg · เหลือง 140–600mg · แดง &gt;600mg</div>
 
         <div style="margin-top:14px;padding-top:14px;border-top:1px solid ${v.healthMeta.border};">
           ${v.advice ? `
@@ -1418,8 +1428,9 @@
             ${(v.advice.reasons || []).length > 0 ? `<div style="margin-top:8px;">${v.advice.reasons.map((r) => `<div style="font:500 11.5px/1.5 'IBM Plex Sans Thai';color:${v.healthMeta.text};opacity:.85;margin-top:3px;">• ${esc(r)}</div>`).join('')}</div>` : ''}
             ${(v.advice.alternatives || []).length > 0 ? `<div style="margin-top:10px;padding:9px 11px;border-radius:11px;background:rgba(255,255,255,.5);"><div style="font:700 10.5px 'IBM Plex Sans Thai';color:${v.healthMeta.text};margin-bottom:4px;">💡 ทางเลือกที่ดีกว่า</div>${v.advice.alternatives.map((a) => `<div style="font:500 11.5px/1.5 'IBM Plex Sans Thai';color:${v.healthMeta.text};margin-top:2px;">→ ${esc(a)}</div>`).join('')}</div>` : ''}
           ` : `
-            <button onclick="__ns.fetchHealthAdvice()" ${v.adviceBusy ? 'disabled' : ''} style="width:100%;padding:11px;border-radius:14px;border:1px solid ${v.healthMeta.border};background:rgba(255,255,255,.55);color:${v.healthMeta.text};font:700 12.5px 'IBM Plex Sans Thai';cursor:${v.adviceBusy ? 'wait' : 'pointer'};opacity:${v.adviceBusy ? .6 : 1};display:flex;align-items:center;justify-content:center;gap:7px;">
-              <span>${v.adviceBusy ? '⏳' : '🤖'}</span> ${v.adviceBusy ? 'AI กำลังวิเคราะห์...' : 'ขอ AI วิเคราะห์เฉพาะคุณ'}
+            <div style="font:500 10.5px/1.4 'IBM Plex Sans Thai';color:${v.healthMeta.text};opacity:.75;margin-bottom:7px;">ต้องการคำแนะนำเฉพาะตัวที่อิงจาก BMI, เป้าหมาย, และมื้อที่กินไปแล้ววันนี้?</div>
+            <button onclick="__ns.fetchHealthAdvice()" ${v.adviceBusy ? 'disabled' : ''} style="width:100%;padding:13px;border-radius:14px;border:none;background:${v.healthMeta.text};color:#fff;font:700 13.5px 'IBM Plex Sans Thai';cursor:${v.adviceBusy ? 'wait' : 'pointer'};opacity:${v.adviceBusy ? .6 : 1};display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 8px 18px -8px ${v.healthMeta.text}aa;">
+              <span style="font-size:16px;">${v.adviceBusy ? '⏳' : '✨'}</span> ${v.adviceBusy ? 'AI กำลังคิด... (รอ ~10 วินาที)' : 'ขอ AI วิเคราะห์เฉพาะคุณ'}
             </button>
           `}
         </div>
